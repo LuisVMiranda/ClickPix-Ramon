@@ -7,6 +7,7 @@ import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -41,8 +42,7 @@ class ClickPixApp extends StatefulWidget {
   const ClickPixApp({
     required this.appSettingsStore,
     this.initialLocale = AppSettingsStore.defaultLocale,
-    this.initialVisualSettings =
-        const AppVisualSettings(highContrastEnabled: false, solarLargeFontEnabled: false),
+    this.initialVisualSettings = const AppVisualSettings(),
     super.key,
   });
 
@@ -67,65 +67,84 @@ class _ClickPixAppState extends State<ClickPixApp> {
 
   @override
   Widget build(BuildContext context) {
-    final baseTheme = ThemeData(
-      colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      useMaterial3: true,
-    );
-
     return MaterialApp(
       locale: _locale,
-      supportedLocales: const [Locale('pt', 'BR'), Locale('en'), Locale('es')],
+      supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: const [
+        AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      title: _tr('title'),
-      theme: _buildTheme(baseTheme),
+      onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
+      themeMode: _visualSettings.themeMode,
+      theme: _buildTheme(Brightness.light),
+      darkTheme: _buildTheme(Brightness.dark),
       home: QuickFlowPage(
         locale: _locale,
         visualSettings: _visualSettings,
         onLocaleChanged: _onLocaleChanged,
         onVisualSettingsChanged: _onVisualSettingsChanged,
-        translate: _tr,
       ),
     );
   }
 
-  ThemeData _buildTheme(ThemeData baseTheme) {
-    var theme = baseTheme;
-
-    if (_visualSettings.highContrastEnabled) {
-      theme = theme.copyWith(
-        colorScheme: const ColorScheme.highContrastLight(),
-      );
-    }
-
-    final textScale = _visualSettings.solarLargeFontEnabled ? 1.2 : 1.0;
-    final textTheme = theme.textTheme.apply(
-      bodyColor: theme.colorScheme.onSurface,
-      displayColor: theme.colorScheme.onSurface,
-      fontSizeFactor: textScale,
+  ThemeData _buildTheme(Brightness brightness) {
+    final baseScheme = ColorScheme.fromSeed(
+      seedColor: Colors.deepPurple,
+      brightness: brightness,
     );
 
-    return theme.copyWith(
-      textTheme: textTheme,
+    final scheme = _visualSettings.highContrastEnabled
+        ? (brightness == Brightness.dark
+              ? const ColorScheme.highContrastDark()
+              : const ColorScheme.highContrastLight())
+        : baseScheme;
+
+    final isSolar = _visualSettings.solarLargeFontEnabled;
+    final textScale = isSolar ? 1.15 : 1.0;
+
+    final base = ThemeData(
+      colorScheme: scheme,
+      useMaterial3: true,
+      visualDensity: isSolar ? VisualDensity.comfortable : VisualDensity.standard,
+    );
+
+    final radius = isSolar ? 16.0 : 12.0;
+    final outlineWidth = isSolar ? 2.2 : 1.1;
+    final minHeight = isSolar ? 72.0 : 60.0;
+
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(radius),
+      side: BorderSide(color: scheme.outline, width: outlineWidth),
+    );
+
+    return base.copyWith(
+      textTheme: base.textTheme.apply(fontSizeFactor: textScale),
+      cardTheme: base.cardTheme.copyWith(
+        shape: shape,
+        elevation: isSolar ? 2 : 1,
+      ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: const Size.fromHeight(64),
-          textStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+          minimumSize: Size.fromHeight(minHeight),
+          textStyle: TextStyle(fontSize: isSolar ? 20 : 18, fontWeight: FontWeight.w700),
+          shape: shape,
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          minimumSize: const Size.fromHeight(64),
-          textStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+          minimumSize: Size.fromHeight(minHeight),
+          textStyle: TextStyle(fontSize: isSolar ? 20 : 18, fontWeight: FontWeight.w700),
+          shape: shape,
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          minimumSize: const Size.fromHeight(64),
-          textStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+          minimumSize: Size.fromHeight(minHeight),
+          textStyle: TextStyle(fontSize: isSolar ? 20 : 18, fontWeight: FontWeight.w700),
+          side: BorderSide(color: scheme.outline, width: outlineWidth),
+          shape: shape,
         ),
       ),
     );
@@ -154,12 +173,6 @@ class _ClickPixAppState extends State<ClickPixApp> {
     }
     return AppSettingsStore.defaultLocale;
   }
-
-  String _tr(String key) {
-    final localeKey = _locale.languageCode == 'pt' ? 'pt-BR' : _locale.languageCode;
-    final localeMap = _translations[localeKey] ?? const <String, String>{};
-    return localeMap[key] ?? _translations['pt-BR']![key] ?? key;
-  }
 }
 
 class QuickFlowPage extends StatelessWidget {
@@ -168,7 +181,6 @@ class QuickFlowPage extends StatelessWidget {
     required this.visualSettings,
     required this.onLocaleChanged,
     required this.onVisualSettingsChanged,
-    required this.translate,
     super.key,
   });
 
@@ -176,29 +188,25 @@ class QuickFlowPage extends StatelessWidget {
   final AppVisualSettings visualSettings;
   final Future<void> Function(Locale locale) onLocaleChanged;
   final Future<void> Function(AppVisualSettings settings) onVisualSettingsChanged;
-  final String Function(String key) translate;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(translate('quickService')),
+        title: Text(l10n.quickService),
         actions: [
           DropdownButtonHideUnderline(
             child: DropdownButton<Locale>(
-              value: locale.languageCode == 'pt'
-                  ? const Locale('pt', 'BR')
-                  : Locale(locale.languageCode),
+              value: locale.languageCode == 'pt' ? const Locale('pt', 'BR') : Locale(locale.languageCode),
               onChanged: (value) {
                 if (value != null) {
                   onLocaleChanged(value);
                 }
               },
               items: const [
-                DropdownMenuItem(
-                  value: Locale('pt', 'BR'),
-                  child: Text('PT-BR'),
-                ),
+                DropdownMenuItem(value: Locale('pt', 'BR'), child: Text('PT-BR')),
                 DropdownMenuItem(value: Locale('en'), child: Text('EN')),
                 DropdownMenuItem(value: Locale('es'), child: Text('ES')),
               ],
@@ -206,42 +214,63 @@ class QuickFlowPage extends StatelessWidget {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            child: _SettingsCard(
-              title: 'Acessibilidade',
-              subtitle: 'Contraste e leitura para uso em ambiente externo',
-              children: [
-                SwitchListTile(
-                  value: visualSettings.highContrastEnabled,
-                  title: const Text('Alto contraste'),
-                  subtitle: const Text('Aumenta diferença entre texto e fundo.'),
-                  onChanged: (value) {
-                    onVisualSettingsChanged(
-                      visualSettings.copyWith(highContrastEnabled: value),
-                    );
-                  },
-                ),
-                SwitchListTile(
-                  value: visualSettings.solarLargeFontEnabled,
-                  title: const Text('Modo Sol (fonte ampliada)'),
-                  subtitle: const Text('Melhora leitura com botões e textos maiores.'),
-                  onChanged: (value) {
-                    onVisualSettingsChanged(
-                      visualSettings.copyWith(solarLargeFontEnabled: value),
-                    );
-                  },
-                ),
-              ],
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: _SettingsCard(
+                title: l10n.accessibilityTitle,
+                subtitle: l10n.accessibilitySubtitle,
+                children: [
+                  SwitchListTile(
+                    value: visualSettings.highContrastEnabled,
+                    title: Text(l10n.highContrast),
+                    subtitle: Text(l10n.highContrastDescription),
+                    onChanged: (value) {
+                      onVisualSettingsChanged(visualSettings.copyWith(highContrastEnabled: value));
+                    },
+                  ),
+                  SwitchListTile(
+                    value: visualSettings.solarLargeFontEnabled,
+                    title: Text(l10n.solarMode),
+                    subtitle: Text(l10n.solarModeDescription),
+                    onChanged: (value) {
+                      onVisualSettingsChanged(visualSettings.copyWith(solarLargeFontEnabled: value));
+                    },
+                  ),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(l10n.themeModeLabel),
+                    subtitle: Text(l10n.themeModeDescription),
+                    trailing: DropdownButton<ThemeMode>(
+                      value: visualSettings.themeMode,
+                      onChanged: (value) {
+                        if (value != null) {
+                          onVisualSettingsChanged(visualSettings.copyWith(themeMode: value));
+                        }
+                      },
+                      items: [
+                        DropdownMenuItem(value: ThemeMode.system, child: Text(l10n.themeModeSystem)),
+                        DropdownMenuItem(value: ThemeMode.light, child: Text(l10n.themeModeLight)),
+                        DropdownMenuItem(value: ThemeMode.dark, child: Text(l10n.themeModeDark)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            child: DeliveryActionsCard(translate: translate),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: DeliveryActionsCard(),
+            ),
           ),
-          const Expanded(child: RecentPhotosPage()),
+          SliverPadding(
+            padding: const EdgeInsets.all(16),
+            sliver: SliverToBoxAdapter(child: RecentPhotosPage()),
+          ),
         ],
       ),
     );
@@ -249,9 +278,7 @@ class QuickFlowPage extends StatelessWidget {
 }
 
 class DeliveryActionsCard extends StatelessWidget {
-  const DeliveryActionsCard({required this.translate, super.key});
-
-  final String Function(String key) translate;
+  const DeliveryActionsCard({super.key});
 
   static const _samplePhone = '5511999999999';
   static const _sampleEmail = 'cliente@clickpix.app';
@@ -260,36 +287,35 @@ class DeliveryActionsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final message = translate('deliveryTemplate')
-        .replaceAll('{link}', _sampleLink)
-        .replaceAll('{code}', _sampleCode);
+    final l10n = AppLocalizations.of(context)!;
+    final message = l10n.deliveryTemplate(_sampleLink, _sampleCode);
 
     return _SettingsCard(
-      title: translate('deliveryActionsTitle'),
-      subtitle: translate('deliveryActionsSubtitle'),
+      title: l10n.deliveryActionsTitle,
+      subtitle: l10n.deliveryActionsSubtitle,
       children: [
         FilledButton.icon(
           onPressed: () => _openWhatsApp(message),
           icon: const Icon(Icons.chat),
-          label: Text(translate('openWhatsApp')),
+          label: Text(l10n.openWhatsApp),
         ),
         const SizedBox(height: 8),
         FilledButton.icon(
-          onPressed: () => _openEmail(message),
+          onPressed: () => _openEmail(l10n, message),
           icon: const Icon(Icons.email),
-          label: Text(translate('openEmail')),
+          label: Text(l10n.openEmail),
         ),
         const SizedBox(height: 8),
         OutlinedButton.icon(
-          onPressed: () => _copy(context, _sampleLink, translate('copiedLink')),
+          onPressed: () => _copy(context, _sampleLink, l10n.copiedLink),
           icon: const Icon(Icons.link),
-          label: Text(translate('copyLink')),
+          label: Text(l10n.copyLink),
         ),
         const SizedBox(height: 8),
         OutlinedButton.icon(
-          onPressed: () => _copy(context, _sampleCode, translate('copiedCode')),
+          onPressed: () => _copy(context, _sampleCode, l10n.copiedCode),
           icon: const Icon(Icons.pin),
-          label: Text(translate('copyCode')),
+          label: Text(l10n.copyCode),
         ),
       ],
     );
@@ -301,8 +327,8 @@ class DeliveryActionsCard extends StatelessWidget {
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
-  Future<void> _openEmail(String message) async {
-    final encodedSubject = Uri.encodeComponent('ClickPix - ${translate('delivery')}');
+  Future<void> _openEmail(AppLocalizations l10n, String message) async {
+    final encodedSubject = Uri.encodeComponent('ClickPix - ${l10n.delivery}');
     final encodedBody = Uri.encodeComponent(message);
     final uri = Uri.parse('mailto:$_sampleEmail?subject=$encodedSubject&body=$encodedBody');
     await launchUrl(uri);
@@ -350,48 +376,3 @@ class _SettingsCard extends StatelessWidget {
     );
   }
 }
-
-const Map<String, Map<String, String>> _translations = {
-  'pt-BR': {
-    'title': 'ClickPix Ramon',
-    'quickService': 'Atendimento Rápido',
-    'delivery': 'Entrega',
-    'deliveryActionsTitle': 'Envio para cliente',
-    'deliveryActionsSubtitle': 'Compartilhe galeria por WhatsApp ou e-mail com 1 toque.',
-    'deliveryTemplate': 'Olá! Sua galeria está pronta: {link} | Código: {code}',
-    'openWhatsApp': 'Abrir WhatsApp',
-    'openEmail': 'Abrir e-mail',
-    'copyLink': 'Copiar link',
-    'copyCode': 'Copiar código',
-    'copiedLink': 'Link copiado com sucesso.',
-    'copiedCode': 'Código copiado com sucesso.',
-  },
-  'en': {
-    'title': 'ClickPix Ramon',
-    'quickService': 'Quick Service',
-    'delivery': 'Delivery',
-    'deliveryActionsTitle': 'Client sharing actions',
-    'deliveryActionsSubtitle': 'Share gallery via WhatsApp or e-mail in one tap.',
-    'deliveryTemplate': 'Hello! Your gallery is ready: {link} | Code: {code}',
-    'openWhatsApp': 'Open WhatsApp',
-    'openEmail': 'Open e-mail',
-    'copyLink': 'Copy link',
-    'copyCode': 'Copy code',
-    'copiedLink': 'Link copied.',
-    'copiedCode': 'Code copied.',
-  },
-  'es': {
-    'title': 'ClickPix Ramon',
-    'quickService': 'Atención Rápida',
-    'delivery': 'Entrega',
-    'deliveryActionsTitle': 'Acciones para el cliente',
-    'deliveryActionsSubtitle': 'Comparte la galería por WhatsApp o correo con un toque.',
-    'deliveryTemplate': '¡Hola! Tu galería está lista: {link} | Código: {code}',
-    'openWhatsApp': 'Abrir WhatsApp',
-    'openEmail': 'Abrir correo',
-    'copyLink': 'Copiar enlace',
-    'copyCode': 'Copiar código',
-    'copiedLink': 'Enlace copiado.',
-    'copiedCode': 'Código copiado.',
-  },
-};

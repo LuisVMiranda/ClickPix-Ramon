@@ -1,0 +1,58 @@
+{
+  "@@locale": "en",
+  "appTitle": "ClickPix Ramon",
+  "quickService": "Quick Service",
+  "delivery": "Delivery",
+  "accessibilityTitle": "Accessibility",
+  "accessibilitySubtitle": "Contrast and readability for outdoor usage",
+  "highContrast": "High contrast",
+  "highContrastDescription": "Increases difference between text and background.",
+  "solarMode": "Sun Mode",
+  "solarModeDescription": "Visual preset with larger fonts, larger buttons, and stronger contrast.",
+  "themeModeLabel": "Theme",
+  "themeModeDescription": "Choose light, dark, or system automatic mode.",
+  "themeModeSystem": "System",
+  "themeModeLight": "Light",
+  "themeModeDark": "Dark",
+  "deliveryActionsTitle": "Client sharing actions",
+  "deliveryActionsSubtitle": "Share gallery via WhatsApp or e-mail in one tap.",
+  "deliveryTemplate": "Hello! Your gallery is ready: {link} | Code: {code}",
+  "@deliveryTemplate": {
+    "placeholders": {
+      "link": {},
+      "code": {}
+    }
+  },
+  "openWhatsApp": "Open WhatsApp",
+  "openEmail": "Open e-mail",
+  "copyLink": "Copy link",
+  "copyCode": "Copy code",
+  "copiedLink": "Link copied.",
+  "copiedCode": "Code copied.",
+  "latestPhotos": "Latest photos",
+  "minutesFilter": "{minutes} min",
+  "@minutesFilter": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "noPhotosInSelectedPeriod": "No photos in selected period.",
+  "quickSelection": "Quick selection ({count})",
+  "@quickSelection": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "photoCapturedMinutesAgo": "captured {minutes} min ago",
+  "@photoCapturedMinutesAgo": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  }
+}

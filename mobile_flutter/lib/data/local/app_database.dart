@@ -72,6 +72,7 @@ class AppSettings extends Table {
       boolean().withDefault(const Constant(false))();
   BoolColumn get solarLargeFontEnabled =>
       boolean().withDefault(const Constant(false))();
+  TextColumn get themeMode => text().withDefault(const Constant('system'))();
 
   @override
   Set<Column<Object>> get primaryKey => {id};
@@ -82,7 +83,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -101,6 +102,9 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 3) {
         await m.addColumn(appSettings, appSettings.solarLargeFontEnabled);
+      }
+      if (from < 4) {
+        await m.addColumn(appSettings, appSettings.themeMode);
       }
     },
   );
