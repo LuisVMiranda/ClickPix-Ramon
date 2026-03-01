@@ -35,17 +35,114 @@ class InMemoryPaymentEventsStore {
 
 const defaultPaymentEventsStore = new InMemoryPaymentEventsStore();
 
+function buildExpiresAt(expirationDays) {
+  return new Date(Date.now() + expirationDays * 86400000).toISOString();
+}
+
 export async function generateOrderAccessCode(orderId, expirationDays = 7) {
   const code = generateAccessCode();
   const hash = await hashAccessCode(code);
-  const expiresAt = new Date(Date.now() + expirationDays * 86400000).toISOString();
-  return { orderId, code, hash, expiresAt };
+  const expiresAt = buildExpiresAt(expirationDays);
+  return {
+    orderId,
+    code,
+    access: {
+      hash,
+      expiresAt,
+      version: 1,
+      replacedAt: null,
+    },
+  };
 }
 
-export async function validateOrderAccessCode(storedHash, typedCode, expiresAtISO) {
-  if (new Date(expiresAtISO) < new Date()) return { valid: false, reason: 'expired' };
-  const ok = await verifyAccessCode(storedHash, typedCode);
+export async function renewOrderAccessCode(previousAccess = {}, expirationDays = 7) {
+  const code = generateAccessCode();
+  const hash = await hashAccessCode(code);
+  const expiresAt = buildExpiresAt(expirationDays);
+  return {
+    code,
+    access: {
+      hash,
+      expiresAt,
+      version: (previousAccess.version ?? 1) + 1,
+      replacedAt: previousAccess.hash ? new Date().toISOString() : null,
+    },
+    invalidated: previousAccess.hash
+      ? {
+          hash: previousAccess.hash,
+          version: previousAccess.version ?? 1,
+          invalidatedAt: new Date().toISOString(),
+        }
+      : null,
+  };
+}
+
+export async function validateOrderAccessCode(access, typedCode) {
+  if (!access?.hash || !access?.expiresAt) {
+    return { valid: false, reason: 'missing_code' };
+  }
+  if (new Date(access.expiresAt) < new Date()) return { valid: false, reason: 'expired' };
+  const ok = await verifyAccessCode(access.hash, typedCode);
   return { valid: ok, reason: ok ? 'ok' : 'invalid_code' };
+}
+
+export async function validateAccessEndpoint(request, options = {}) {
+  if (request?.method !== 'POST') {
+    return {
+      status: 405,
+      body: { ok: false, reason: 'method_not_allowed' },
+    };
+  }
+
+  const orderId = String(request?.body?.orderId ?? '').trim();
+  const typedCode = String(request?.body?.code ?? '').trim();
+  const assetPath = String(request?.body?.assetPath ?? '').trim();
+  if (!orderId || !/^\d{6}$/.test(typedCode)) {
+    return {
+      status: 400,
+      body: { ok: false, reason: 'invalid_payload' },
+    };
+  }
+
+  const order = await options.ordersStore?.findById(orderId);
+  if (!order?.delivery?.access) {
+    return {
+      status: 404,
+      body: { ok: false, reason: 'order_not_found' },
+    };
+  }
+
+  const validation = await validateOrderAccessCode(order.delivery.access, typedCode);
+  if (!validation.valid) {
+    return {
+      status: validation.reason === 'expired' ? 410 : 401,
+      body: {
+        ok: false,
+        reason: validation.reason,
+        message:
+          validation.reason === 'expired'
+            ? 'Seu código expirou. Solicite um novo código.'
+            : 'Código inválido. Verifique os 6 dígitos e tente novamente.',
+      },
+    };
+  }
+
+  const signedDownloadUrl = await options.signDownloadUrl?.({
+    orderId,
+    assetPath,
+    expiresInSeconds: 300,
+  });
+
+  return {
+    status: 200,
+    body: {
+      ok: true,
+      orderId,
+      galleryId: order.delivery.galleryId,
+      signedDownloadUrl: signedDownloadUrl ?? null,
+      downloadExpiresInSeconds: 300,
+    },
+  };
 }
 
 export async function webhookMercadoPago(event, options = {}) {

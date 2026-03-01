@@ -5,26 +5,81 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Galeria ClickPix</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 24px; }
-    .card { max-width: 460px; padding: 16px; border: 1px solid #ddd; border-radius: 10px; }
-    input, button { padding: 10px; width: 100%; margin-top: 8px; }
+    body { font-family: Arial, sans-serif; margin: 24px; background: #fafafa; }
+    .card { max-width: 520px; padding: 16px; border: 1px solid #ddd; border-radius: 10px; background: #fff; }
+    input, button { padding: 10px; width: 100%; margin-top: 8px; border-radius: 8px; border: 1px solid #c8c8c8; }
+    button { background: #3f51b5; color: #fff; border: none; font-weight: bold; cursor: pointer; }
+    button:hover { background: #33429a; }
+    .hint { color: #666; font-size: 14px; }
+    .status { margin-top: 12px; padding: 10px; border-radius: 8px; font-size: 14px; }
+    .status.error { background: #ffebee; color: #c62828; }
+    .status.success { background: #e8f5e9; color: #2e7d32; }
+    .hidden { display: none; }
   </style>
 </head>
 <body>
   <div class="card">
     <h1>Acessar galeria</h1>
-    <p>Digite o código de 6 dígitos recebido.</p>
-    <input id="code" maxlength="6" placeholder="483920" />
-    <button onclick="validate()">Validar</button>
-    <pre id="out"></pre>
+    <p class="hint">Digite o ID do pedido e o código de 6 dígitos recebido.</p>
+
+    <input id="orderId" placeholder="order-123" />
+    <input id="assetPath" placeholder="galleries/order-123/foto-01.jpg" />
+    <input id="code" maxlength="6" placeholder="483920" inputmode="numeric" />
+    <button onclick="validateAccess()">Validar e liberar download</button>
+
+    <div id="status" class="status hidden"></div>
+    <a id="downloadLink" class="hidden" target="_blank" rel="noopener noreferrer">Baixar arquivo temporário</a>
   </div>
+
   <script>
-    async function validate() {
-      const code = document.getElementById('code').value;
-      const ok = /^\d{6}$/.test(code);
-      document.getElementById('out').textContent = ok
-        ? 'Código válido (mock). Exibir lista de fotos aqui.'
-        : 'Código inválido.';
+    const ENDPOINT = '/portal/validate-access';
+
+    function setStatus(message, type) {
+      const status = document.getElementById('status');
+      status.className = `status ${type}`;
+      status.textContent = message;
+    }
+
+    async function validateAccess() {
+      const orderId = document.getElementById('orderId').value.trim();
+      const code = document.getElementById('code').value.trim();
+      const assetPath = document.getElementById('assetPath').value.trim();
+      const downloadLink = document.getElementById('downloadLink');
+      downloadLink.classList.add('hidden');
+
+      if (!orderId || !assetPath || !/^\d{6}$/.test(code)) {
+        setStatus('Preencha pedido, arquivo e código de 6 dígitos válido.', 'error');
+        return;
+      }
+
+      try {
+        const response = await fetch(ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderId, code, assetPath }),
+        });
+        const payload = await response.json();
+
+        if (!response.ok) {
+          if (payload.reason === 'expired') {
+            setStatus('Código expirado. Solicite um novo código ao fotógrafo.', 'error');
+          } else if (payload.reason === 'invalid_code') {
+            setStatus('Código inválido. Confira os 6 dígitos e tente novamente.', 'error');
+          } else {
+            setStatus(payload.message || 'Não foi possível validar seu acesso.', 'error');
+          }
+          return;
+        }
+
+        setStatus(`Acesso liberado! Link válido por ${payload.downloadExpiresInSeconds}s.`, 'success');
+        if (payload.signedDownloadUrl) {
+          downloadLink.href = payload.signedDownloadUrl;
+          downloadLink.textContent = 'Baixar arquivo temporário';
+          downloadLink.classList.remove('hidden');
+        }
+      } catch (error) {
+        setStatus('Falha de conexão com o servidor. Tente novamente.', 'error');
+      }
     }
   </script>
 </body>

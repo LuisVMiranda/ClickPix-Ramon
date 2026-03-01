@@ -6,9 +6,11 @@ import 'package:clickpix_ramon/presentation/recent_photos_page.dart';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -235,10 +237,83 @@ class QuickFlowPage extends StatelessWidget {
               ],
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: DeliveryActionsCard(translate: translate),
+          ),
           const Expanded(child: RecentPhotosPage()),
         ],
       ),
     );
+  }
+}
+
+class DeliveryActionsCard extends StatelessWidget {
+  const DeliveryActionsCard({required this.translate, super.key});
+
+  final String Function(String key) translate;
+
+  static const _samplePhone = '5511999999999';
+  static const _sampleEmail = 'cliente@clickpix.app';
+  static const _sampleLink = 'https://clickpix.app/gallery/order-123';
+  static const _sampleCode = '483920';
+
+  @override
+  Widget build(BuildContext context) {
+    final message = translate('deliveryTemplate')
+        .replaceAll('{link}', _sampleLink)
+        .replaceAll('{code}', _sampleCode);
+
+    return _SettingsCard(
+      title: translate('deliveryActionsTitle'),
+      subtitle: translate('deliveryActionsSubtitle'),
+      children: [
+        FilledButton.icon(
+          onPressed: () => _openWhatsApp(message),
+          icon: const Icon(Icons.chat),
+          label: Text(translate('openWhatsApp')),
+        ),
+        const SizedBox(height: 8),
+        FilledButton.icon(
+          onPressed: () => _openEmail(message),
+          icon: const Icon(Icons.email),
+          label: Text(translate('openEmail')),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: () => _copy(context, _sampleLink, translate('copiedLink')),
+          icon: const Icon(Icons.link),
+          label: Text(translate('copyLink')),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: () => _copy(context, _sampleCode, translate('copiedCode')),
+          icon: const Icon(Icons.pin),
+          label: Text(translate('copyCode')),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _openWhatsApp(String message) async {
+    final encodedMessage = Uri.encodeComponent(message);
+    final uri = Uri.parse('https://wa.me/$_samplePhone?text=$encodedMessage');
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  Future<void> _openEmail(String message) async {
+    final encodedSubject = Uri.encodeComponent('ClickPix - ${translate('delivery')}');
+    final encodedBody = Uri.encodeComponent(message);
+    final uri = Uri.parse('mailto:$_sampleEmail?subject=$encodedSubject&body=$encodedBody');
+    await launchUrl(uri);
+  }
+
+  Future<void> _copy(BuildContext context, String value, String successText) async {
+    await Clipboard.setData(ClipboardData(text: value));
+    if (!context.mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(successText)));
   }
 }
 
@@ -280,13 +355,43 @@ const Map<String, Map<String, String>> _translations = {
   'pt-BR': {
     'title': 'ClickPix Ramon',
     'quickService': 'Atendimento Rápido',
+    'delivery': 'Entrega',
+    'deliveryActionsTitle': 'Envio para cliente',
+    'deliveryActionsSubtitle': 'Compartilhe galeria por WhatsApp ou e-mail com 1 toque.',
+    'deliveryTemplate': 'Olá! Sua galeria está pronta: {link} | Código: {code}',
+    'openWhatsApp': 'Abrir WhatsApp',
+    'openEmail': 'Abrir e-mail',
+    'copyLink': 'Copiar link',
+    'copyCode': 'Copiar código',
+    'copiedLink': 'Link copiado com sucesso.',
+    'copiedCode': 'Código copiado com sucesso.',
   },
   'en': {
     'title': 'ClickPix Ramon',
     'quickService': 'Quick Service',
+    'delivery': 'Delivery',
+    'deliveryActionsTitle': 'Client sharing actions',
+    'deliveryActionsSubtitle': 'Share gallery via WhatsApp or e-mail in one tap.',
+    'deliveryTemplate': 'Hello! Your gallery is ready: {link} | Code: {code}',
+    'openWhatsApp': 'Open WhatsApp',
+    'openEmail': 'Open e-mail',
+    'copyLink': 'Copy link',
+    'copyCode': 'Copy code',
+    'copiedLink': 'Link copied.',
+    'copiedCode': 'Code copied.',
   },
   'es': {
     'title': 'ClickPix Ramon',
     'quickService': 'Atención Rápida',
+    'delivery': 'Entrega',
+    'deliveryActionsTitle': 'Acciones para el cliente',
+    'deliveryActionsSubtitle': 'Comparte la galería por WhatsApp o correo con un toque.',
+    'deliveryTemplate': '¡Hola! Tu galería está lista: {link} | Código: {code}',
+    'openWhatsApp': 'Abrir WhatsApp',
+    'openEmail': 'Abrir correo',
+    'copyLink': 'Copiar enlace',
+    'copyCode': 'Copiar código',
+    'copiedLink': 'Enlace copiado.',
+    'copiedCode': 'Código copiado.',
   },
 };
