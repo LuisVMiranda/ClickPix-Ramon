@@ -33,6 +33,17 @@ class InMemoryOrdersStore {
   }
 }
 
+function mpHeaders(secret, event) {
+  const ts = '1700000000';
+  const requestId = 'req-abc';
+  const manifest = `id:${event.data?.id ?? event.id};request-id:${requestId};ts:${ts};`;
+  const v1 = crypto.createHmac('sha256', secret).update(manifest).digest('hex');
+  return {
+    'x-request-id': requestId,
+    'x-signature': `ts=${ts},v1=${v1}`,
+  };
+}
+
 test('webhook rejects duplicated providerEventId using payment_events collection semantics', async () => {
   const secret = 'very-secret';
   const event = {
@@ -40,8 +51,6 @@ test('webhook rejects duplicated providerEventId using payment_events collection
     status: 'approved',
     external_reference: 'EXT-100',
   };
-  const rawBody = JSON.stringify(event);
-  const signature = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
 
   const paymentEventsStore = new InMemoryPaymentEventsStore();
   const ordersStore = new InMemoryOrdersStore({
@@ -50,18 +59,17 @@ test('webhook rejects duplicated providerEventId using payment_events collection
     status: 'AwaitingPayment',
   });
 
+  const headers = mpHeaders(secret, event);
   const first = await webhookMercadoPago(event, {
-    rawBody,
-    signature,
     secret,
+    headers,
     paymentEventsStore,
     ordersStore,
   });
 
   const second = await webhookMercadoPago(event, {
-    rawBody,
-    signature,
     secret,
+    headers,
     paymentEventsStore,
     ordersStore,
   });
@@ -91,13 +99,10 @@ test('webhook out of order does not break state machine transitions', async () =
     status: 'approved',
     external_reference: 'EXT-200',
   };
-  const paidRawBody = JSON.stringify(paidEvent);
-  const paidSignature = crypto.createHmac('sha256', secret).update(paidRawBody).digest('hex');
 
   const paidResult = await webhookMercadoPago(paidEvent, {
-    rawBody: paidRawBody,
-    signature: paidSignature,
     secret,
+    headers: mpHeaders(secret, paidEvent),
     paymentEventsStore,
     ordersStore,
   });
@@ -110,13 +115,10 @@ test('webhook out of order does not break state machine transitions', async () =
     status: 'pending',
     external_reference: 'EXT-200',
   };
-  const lateRawBody = JSON.stringify(latePendingEvent);
-  const lateSignature = crypto.createHmac('sha256', secret).update(lateRawBody).digest('hex');
 
   const lateResult = await webhookMercadoPago(latePendingEvent, {
-    rawBody: lateRawBody,
-    signature: lateSignature,
     secret,
+    headers: mpHeaders(secret, latePendingEvent),
     paymentEventsStore,
     ordersStore,
   });

@@ -9,6 +9,8 @@ function toProviderMetadata(intent) {
     externalReference: intent.externalReference,
     checkoutUrl: intent.checkoutUrl,
     status: intent.status,
+    qrCodeText: intent.qrCodeText,
+    qrCodeBase64: intent.qrCodeBase64,
   };
 }
 
@@ -18,7 +20,7 @@ function resolveOrderShortId(order) {
   throw new Error('Order must provide id or shortId');
 }
 
-export async function createOrderPaymentIntent(order, provider) {
+export async function createOrderPaymentIntent(order, provider, payload = {}) {
   assertPaymentProvider(provider);
 
   if (!canTransition(order.status, 'AwaitingPayment')) {
@@ -33,6 +35,8 @@ export async function createOrderPaymentIntent(order, provider) {
     externalReference,
     description: `Order ${order.id}`,
     orderId: order.id,
+    payer: payload.payer,
+    methodData: payload.methodData,
   });
 
   const nextOrder = {

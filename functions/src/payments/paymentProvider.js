@@ -7,6 +7,8 @@
  * @property {string} externalReference
  * @property {number} amountCents
  * @property {string} currency
+ * @property {string|null} [qrCodeText]
+ * @property {string|null} [qrCodeBase64]
  */
 
 /**
@@ -18,14 +20,12 @@
  *   currency: string,
  *   externalReference: string,
  *   description?: string,
- *   orderId: string
+ *   orderId: string,
+ *   payer?: {email?: string, firstName?: string, lastName?: string},
+ *   methodData?: Record<string, unknown>
  * }) => Promise<PaymentIntent>} createPaymentIntent
  */
 
-/**
- * Runtime guard for adapter contract.
- * @param {unknown} provider
- */
 export function assertPaymentProvider(provider) {
   if (!provider || typeof provider !== 'object') {
     throw new Error('Payment provider must be an object');

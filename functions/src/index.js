@@ -1,9 +1,16 @@
 import crypto from 'node:crypto';
+import { onRequest } from 'firebase-functions/v2/https';
+import { initializeApp } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
 import { generateAccessCode, hashAccessCode, verifyAccessCode } from './shared/accessCode.js';
 import { createOrderPaymentIntent } from './orders/paymentIntentService.js';
 import { canTransition } from './orders/statusMachine.js';
 import { mercadoPagoProvider } from './payments/adapters/mercadoPagoProvider.js';
-import { payPalProvider } from './payments/adapters/paypalProvider.js';
+import { payPalProvider, verifyPayPalWebhook } from './payments/adapters/paypalProvider.js';
+import { FirestoreOrdersStore, FirestorePaymentEventsStore } from './firestoreStores.js';
+
+initializeApp();
+const firestore = getFirestore();
 
 const providerStatusToOrderStatus = {
   approved: 'Paid',
@@ -17,23 +24,11 @@ const providerStatusToOrderStatus = {
   refunded: 'Refunded',
   partially_refunded: 'Refunded',
   chargeback: 'Refunded',
+  completed: 'Paid',
 };
 
-class InMemoryPaymentEventsStore {
-  constructor() {
-    this._eventIds = new Set();
-  }
-
-  async has(providerEventId) {
-    return this._eventIds.has(providerEventId);
-  }
-
-  async insert(providerEventId) {
-    this._eventIds.add(providerEventId);
-  }
-}
-
-const defaultPaymentEventsStore = new InMemoryPaymentEventsStore();
+const defaultPaymentEventsStore = new FirestorePaymentEventsStore(firestore);
+const defaultOrdersStore = new FirestoreOrdersStore(firestore);
 
 function buildExpiresAt(expirationDays) {
   return new Date(Date.now() + expirationDays * 86400000).toISOString();
@@ -54,6 +49,7 @@ export async function generateOrderAccessCode(orderId, expirationDays = 7) {
     },
   };
 }
+
 
 export async function renewOrderAccessCode(previousAccess = {}, expirationDays = 7) {
   const code = generateAccessCode();
@@ -88,50 +84,30 @@ export async function validateOrderAccessCode(access, typedCode) {
 
 export async function validateAccessEndpoint(request, options = {}) {
   if (request?.method !== 'POST') {
-    return {
-      status: 405,
-      body: { ok: false, reason: 'method_not_allowed' },
-    };
+    return { status: 405, body: { ok: false, reason: 'method_not_allowed' } };
   }
 
   const orderId = String(request?.body?.orderId ?? '').trim();
   const typedCode = String(request?.body?.code ?? '').trim();
   const assetPath = String(request?.body?.assetPath ?? '').trim();
   if (!orderId || !/^\d{6}$/.test(typedCode)) {
-    return {
-      status: 400,
-      body: { ok: false, reason: 'invalid_payload' },
-    };
+    return { status: 400, body: { ok: false, reason: 'invalid_payload' } };
   }
 
-  const order = await options.ordersStore?.findById(orderId);
+  const order = await (options.ordersStore ?? defaultOrdersStore).findById(orderId);
   if (!order?.delivery?.access) {
-    return {
-      status: 404,
-      body: { ok: false, reason: 'order_not_found' },
-    };
+    return { status: 404, body: { ok: false, reason: 'order_not_found' } };
   }
 
   const validation = await validateOrderAccessCode(order.delivery.access, typedCode);
   if (!validation.valid) {
     return {
       status: validation.reason === 'expired' ? 410 : 401,
-      body: {
-        ok: false,
-        reason: validation.reason,
-        message:
-          validation.reason === 'expired'
-            ? 'Seu código expirou. Solicite um novo código.'
-            : 'Código inválido. Verifique os 6 dígitos e tente novamente.',
-      },
+      body: { ok: false, reason: validation.reason },
     };
   }
 
-  const signedDownloadUrl = await options.signDownloadUrl?.({
-    orderId,
-    assetPath,
-    expiresInSeconds: 300,
-  });
+  const signedDownloadUrl = await options.signDownloadUrl?.({ orderId, assetPath, expiresInSeconds: 300 });
 
   return {
     status: 200,
@@ -145,9 +121,33 @@ export async function validateAccessEndpoint(request, options = {}) {
   };
 }
 
+function getHeader(headers, name) {
+  if (!headers) return undefined;
+  const value = headers[name] ?? headers[name.toLowerCase()];
+  return Array.isArray(value) ? value[0] : value;
+}
+
 export async function webhookMercadoPago(event, options = {}) {
+  const rawBody = options.rawBody ?? JSON.stringify(event);
+  const headers = options.headers ?? {};
+  const signature = options.signature ?? getHeader(headers, 'x-signature');
+  const requestId = getHeader(headers, 'x-request-id');
+
+  const isValid = validateMercadoPagoSignature({
+    rawBody,
+    signature,
+    requestId,
+    secret: options.secret ?? process.env.MERCADOPAGO_WEBHOOK_SECRET,
+    dataId: event.data?.id ?? event.id,
+  });
+
+  if (!isValid) {
+    return { accepted: false, reason: 'invalid_signature' };
+  }
+
   return processWebhookEvent('mercadopago', event, {
     ...options,
+    skipSignatureValidation: true,
     providerEventId: extractMercadoPagoProviderEventId(event),
     externalReference: extractExternalReference(event),
     providerStatus: extractProviderStatus(event),
@@ -155,81 +155,77 @@ export async function webhookMercadoPago(event, options = {}) {
 }
 
 export async function webhookPayPal(event, options = {}) {
+  const rawBody = options.rawBody ?? JSON.stringify(event);
+  const headers = options.headers ?? {};
+
+  const verified = options.skipSignatureValidation
+    ? true
+    : await verifyPayPalWebhook(rawBody, normalizeHeaders(headers));
+
+  if (!verified) {
+    return { accepted: false, reason: 'invalid_signature' };
+  }
+
   return processWebhookEvent('paypal', event, {
     ...options,
+    skipSignatureValidation: true,
     providerEventId: extractPayPalProviderEventId(event),
     externalReference: extractExternalReference(event),
     providerStatus: extractProviderStatus(event),
   });
 }
 
-async function processWebhookEvent(provider, event, options) {
-  const {
-    rawBody = JSON.stringify(event),
-    signature,
-    secret,
-    paymentEventsStore = defaultPaymentEventsStore,
-    ordersStore,
-    providerEventId,
-    externalReference,
-    providerStatus,
-  } = options;
+function normalizeHeaders(headers) {
+  return Object.fromEntries(Object.entries(headers).map(([key, value]) => [key.toLowerCase(), value]));
+}
 
-  if (!validateWebhookSignature({ rawBody, signature, secret })) {
-    return { accepted: false, reason: 'invalid_signature' };
+export function validateMercadoPagoSignature({ rawBody, signature, requestId, secret, dataId }) {
+  if (!secret) {
+    return true;
   }
+
+  if (!signature || !requestId || !dataId) {
+    return false;
+  }
+
+  const parts = Object.fromEntries(
+    String(signature)
+      .split(',')
+      .map((part) => part.trim().split('=')),
+  );
+
+  const ts = parts.ts;
+  const hash = parts.v1;
+  if (!ts || !hash) {
+    return false;
+  }
+
+  const manifest = `id:${dataId};request-id:${requestId};ts:${ts};`;
+  const expected = crypto.createHmac('sha256', secret).update(manifest).digest('hex');
+  return crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(expected));
+}
+
+async function processWebhookEvent(provider, event, options) {
+  const { paymentEventsStore = defaultPaymentEventsStore, ordersStore = defaultOrdersStore, providerEventId } =
+    options;
 
   if (!providerEventId) {
     return { accepted: false, reason: 'missing_provider_event_id' };
   }
 
   if (await paymentEventsStore.has(providerEventId)) {
-    return {
-      accepted: true,
-      duplicate: true,
-      provider,
-      providerEventId,
-      externalReference,
-      status: 'ignored',
-    };
+    return { accepted: true, duplicate: true, provider, providerEventId, status: 'ignored' };
   }
 
-  await paymentEventsStore.insert(providerEventId);
+  await paymentEventsStore.insert(providerEventId, { provider });
 
   const statusResult = await updateOrderStatusByExternalReference({
     ordersStore,
-    externalReference,
-    providerStatus,
+    externalReference: options.externalReference,
+    providerStatus: options.providerStatus,
   });
 
-  return {
-    accepted: true,
-    provider,
-    providerEventId,
-    externalReference,
-    duplicate: false,
-    ...statusResult,
-  };
-}
-
-function validateWebhookSignature({ rawBody, signature, secret }) {
-  if (!secret) {
-    return true;
-  }
-
-  if (!signature) {
-    return false;
-  }
-
-  const expectedSignature = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
-  const provided = Buffer.from(signature);
-  const expected = Buffer.from(expectedSignature);
-
-  if (provided.length !== expected.length) {
-    return false;
-  }
-
-  return crypto.timingSafeEqual(provided, expected);
+  return { accepted: true, provider, providerEventId, duplicate: false, ...statusResult };
 }
 
 async function updateOrderStatusByExternalReference({ ordersStore, externalReference, providerStatus }) {
@@ -293,3 +289,50 @@ export async function createMercadoPagoIntent(order) {
 export async function createPayPalIntent(order) {
   return createOrderPaymentIntent(order, payPalProvider);
 }
+
+export const createPaymentIntent = onRequest(async (req, res) => {
+  if (req.method !== 'POST') {
+    res.status(405).json({ ok: false, reason: 'method_not_allowed' });
+    return;
+  }
+
+  const orderId = String(req.path.split('/')[2] ?? req.body?.orderId ?? '').trim();
+  const provider = String(req.query.provider ?? req.body?.provider ?? '').toLowerCase();
+  if (!orderId || !['mercadopago', 'paypal'].includes(provider)) {
+    res.status(400).json({ ok: false, reason: 'invalid_payload' });
+    return;
+  }
+
+  const order = await defaultOrdersStore.findById(orderId);
+  if (!order) {
+    res.status(404).json({ ok: false, reason: 'order_not_found' });
+    return;
+  }
+
+  const selectedProvider = provider === 'mercadopago' ? mercadoPagoProvider : payPalProvider;
+  const { paymentIntent } = await createOrderPaymentIntent(order, selectedProvider, req.body ?? {});
+  await defaultOrdersStore.savePaymentIntent(orderId, paymentIntent);
+
+  res.status(201).json({ ok: true, paymentIntent });
+});
+
+export const mercadoPagoWebhook = onRequest(async (req, res) => {
+  const result = await webhookMercadoPago(req.body, {
+    rawBody: req.rawBody?.toString() ?? JSON.stringify(req.body),
+    headers: req.headers,
+  });
+  res.status(result.accepted ? 200 : 400).json(result);
+});
+
+export const payPalWebhook = onRequest(async (req, res) => {
+  const result = await webhookPayPal(req.body, {
+    rawBody: req.rawBody?.toString() ?? JSON.stringify(req.body),
+    headers: req.headers,
+  });
+  res.status(result.accepted ? 200 : 400).json(result);
+});
+
+export const validateAccess = onRequest(async (req, res) => {
+  const result = await validateAccessEndpoint(req, { ordersStore: defaultOrdersStore });
+  res.status(result.status).json(result.body);
+});
