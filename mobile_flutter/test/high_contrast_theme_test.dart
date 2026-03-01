@@ -10,7 +10,12 @@ void main() {
     final database = AppDatabase(NativeDatabase.memory());
     final store = AppSettingsStore(database);
 
-    await tester.pumpWidget(ClickPixApp(appSettingsStore: store));
+    await tester.pumpWidget(
+      ClickPixApp(
+        appSettingsStore: store,
+        database: database,
+      ),
+    );
     await tester.pumpAndSettle();
 
     final materialBefore = tester.widget<MaterialApp>(find.byType(MaterialApp));

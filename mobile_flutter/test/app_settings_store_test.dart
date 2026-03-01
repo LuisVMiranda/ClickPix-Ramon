@@ -1,5 +1,6 @@
 import 'package:clickpix_ramon/core/settings/app_settings_store.dart';
 import 'package:clickpix_ramon/data/local/app_database.dart';
+import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -26,6 +27,25 @@ void main() {
       final loaded = await store.loadDeliverySettings();
       expect(loaded.wifiOnly, isTrue);
       expect(loaded.accessCodeValidityDays, 14);
+    });
+
+
+
+    test('faz fallback de locale e theme inválidos para padrões seguros', () async {
+      await database.into(database.appSettings).insert(
+            const AppSettingsCompanion.insert(
+              id: Value(1),
+              language: 'fr-FR',
+              themeMode: Value('sepia'),
+            ),
+          );
+
+      final locale = await store.loadLocale();
+      final visual = await store.loadVisualSettings();
+
+      expect(locale.languageCode, 'pt');
+      expect(locale.countryCode, 'BR');
+      expect(visual.themeMode, ThemeMode.system);
     });
 
     test('persiste ThemeMode em visual settings', () async {

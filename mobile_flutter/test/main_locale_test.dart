@@ -24,7 +24,11 @@ void main() {
     ) async {
       final initialLocale = await store.loadLocale();
       await tester.pumpWidget(
-        ClickPixApp(appSettingsStore: store, initialLocale: initialLocale),
+        ClickPixApp(
+          appSettingsStore: store,
+          database: database,
+          initialLocale: initialLocale,
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -50,6 +54,7 @@ void main() {
       await tester.pumpWidget(
         ClickPixApp(
           appSettingsStore: store,
+          database: database,
           initialLocale: persistedLocale,
         ),
       );
