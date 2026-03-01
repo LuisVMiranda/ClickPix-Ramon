@@ -24,6 +24,7 @@ Future<void> main() async {
   runApp(
     ClickPixApp(
       appSettingsStore: appSettingsStore,
+      database: database,
       initialLocale: locale,
       initialVisualSettings: visualSettings,
     ),
@@ -41,12 +42,14 @@ Future<AppDatabase> _bootstrapDatabase() async {
 class ClickPixApp extends StatefulWidget {
   const ClickPixApp({
     required this.appSettingsStore,
+    required this.database,
     this.initialLocale = AppSettingsStore.defaultLocale,
     this.initialVisualSettings = const AppVisualSettings(),
     super.key,
   });
 
   final AppSettingsStore appSettingsStore;
+  final AppDatabase database;
   final Locale initialLocale;
   final AppVisualSettings initialVisualSettings;
 
@@ -81,6 +84,7 @@ class _ClickPixAppState extends State<ClickPixApp> {
       theme: _buildTheme(Brightness.light),
       darkTheme: _buildTheme(Brightness.dark),
       home: QuickFlowPage(
+        database: widget.database,
         locale: _locale,
         visualSettings: _visualSettings,
         onLocaleChanged: _onLocaleChanged,
@@ -177,6 +181,7 @@ class _ClickPixAppState extends State<ClickPixApp> {
 
 class QuickFlowPage extends StatelessWidget {
   const QuickFlowPage({
+    required this.database,
     required this.locale,
     required this.visualSettings,
     required this.onLocaleChanged,
@@ -184,6 +189,7 @@ class QuickFlowPage extends StatelessWidget {
     super.key,
   });
 
+  final AppDatabase database;
   final Locale locale;
   final AppVisualSettings visualSettings;
   final Future<void> Function(Locale locale) onLocaleChanged;
@@ -269,7 +275,7 @@ class QuickFlowPage extends StatelessWidget {
           ),
           SliverPadding(
             padding: const EdgeInsets.all(16),
-            sliver: SliverToBoxAdapter(child: RecentPhotosPage()),
+            sliver: SliverToBoxAdapter(child: RecentPhotosPage(database: database)),
           ),
         ],
       ),

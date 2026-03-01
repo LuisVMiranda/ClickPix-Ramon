@@ -25,4 +25,35 @@ class LocalClientRepository implements ClientRepository {
           ),
         );
   }
+
+  Future<List<ClientSummary>> listClients() async {
+    final rows = await (_database.select(_database.clients)
+          ..orderBy([(tbl) => OrderingTerm.desc(tbl.createdAt)]))
+        .get();
+
+    return rows
+        .map(
+          (row) => ClientSummary(
+            id: row.id,
+            name: row.name,
+            whatsapp: row.whatsapp,
+            email: row.email,
+          ),
+        )
+        .toList(growable: false);
+  }
+}
+
+class ClientSummary {
+  const ClientSummary({
+    required this.id,
+    required this.name,
+    required this.whatsapp,
+    this.email,
+  });
+
+  final String id;
+  final String name;
+  final String whatsapp;
+  final String? email;
 }

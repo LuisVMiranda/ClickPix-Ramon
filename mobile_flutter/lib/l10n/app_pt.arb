@@ -54,5 +54,29 @@
         "type": "int"
       }
     }
-  }
+  },
+  "refreshGallery": "Atualizar galeria",
+  "galleryPermissionRequired": "Permissão de fotos necessária para carregar a galeria.",
+  "createOrderWithSelection": "Criar pedido ({count})",
+  "@createOrderWithSelection": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "orderCreatedOffline": "Pedido salvo offline com {count} fotos.",
+  "@orderCreatedOffline": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selectOrCreateClient": "Selecionar ou criar cliente",
+  "newClient": "Novo cliente",
+  "clientNameLabel": "Nome do cliente",
+  "clientWhatsAppLabel": "WhatsApp",
+  "clientEmailLabel": "E-mail (opcional)",
+  "createClientAndContinue": "Criar cliente e continuar"
 }

@@ -11,16 +11,37 @@ class LocalOrderRepository implements OrderRepository {
 
   @override
   Future<void> createOrder(domain.Order order) async {
-    await _database.into(_database.orders).insert(
-          OrdersCompanion.insert(
-            id: order.id,
-            clientId: order.clientId,
-            totalAmountCents: order.totalAmountCents,
-            status: OrderStatusTransition.contractStateByStatus[order.status]!,
-            paymentMethod: order.paymentMethod.name,
-            externalReference: order.externalReference,
-          ),
-        );
+    await _database.transaction(() async {
+      await _database.into(_database.orders).insert(
+            OrdersCompanion.insert(
+              id: order.id,
+              clientId: order.clientId,
+              totalAmountCents: order.totalAmountCents,
+              status: OrderStatusTransition.contractStateByStatus[order.status]!,
+              paymentMethod: order.paymentMethod.name,
+              externalReference: order.externalReference,
+            ),
+          );
+
+      for (final itemId in order.itemIds) {
+        await _database.into(_database.orderItems).insert(
+              OrderItemsCompanion.insert(
+                id: '${order.id}_$itemId',
+                orderId: order.id,
+                photoAssetId: itemId,
+                unitPriceCents: _itemUnitPrice(order, order.itemIds.length),
+              ),
+              mode: InsertMode.insertOrIgnore,
+            );
+      }
+    });
+  }
+
+  int _itemUnitPrice(domain.Order order, int itemCount) {
+    if (itemCount == 0) {
+      return 0;
+    }
+    return (order.totalAmountCents / itemCount).round();
   }
 
   @override

@@ -54,5 +54,29 @@
         "type": "int"
       }
     }
-  }
+  },
+  "refreshGallery": "Refresh gallery",
+  "galleryPermissionRequired": "Photo permission is required to load the gallery.",
+  "createOrderWithSelection": "Create order ({count})",
+  "@createOrderWithSelection": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "orderCreatedOffline": "Offline order saved with {count} photos.",
+  "@orderCreatedOffline": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selectOrCreateClient": "Select or create client",
+  "newClient": "New client",
+  "clientNameLabel": "Client name",
+  "clientWhatsAppLabel": "WhatsApp",
+  "clientEmailLabel": "Email (optional)",
+  "createClientAndContinue": "Create client and continue"
 }
