@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:clickpix_ramon/core/settings/watermark_config.dart';
 import 'package:clickpix_ramon/data/local/app_database.dart';
 import 'package:drift/drift.dart';
 
@@ -45,6 +46,22 @@ class AppSettingsStore {
             id: const Value(1),
             highContrastEnabled: Value(settings.highContrastEnabled),
             solarLargeFontEnabled: Value(settings.solarLargeFontEnabled),
+          ),
+        );
+  }
+
+  Future<WatermarkConfig> loadWatermarkConfig() async {
+    final row = await _loadSettingsRow();
+    final rawValue = row?.watermarkConfigJson ?? '{}';
+    return WatermarkConfig.fromJson(rawValue);
+  }
+
+  Future<void> saveWatermarkConfig(WatermarkConfig config) async {
+    config.validate();
+    await _database.into(_database.appSettings).insertOnConflictUpdate(
+          AppSettingsCompanion.insert(
+            id: const Value(1),
+            watermarkConfigJson: config.toJson(),
           ),
         );
   }
