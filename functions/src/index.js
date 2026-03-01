@@ -1,4 +1,7 @@
 import { generateAccessCode, hashAccessCode, verifyAccessCode } from './shared/accessCode.js';
+import { createOrderPaymentIntent } from './orders/paymentIntentService.js';
+import { mercadoPagoProvider } from './payments/adapters/mercadoPagoProvider.js';
+import { payPalProvider } from './payments/adapters/paypalProvider.js';
 
 export async function generateOrderAccessCode(orderId, expirationDays = 7) {
   const code = generateAccessCode();
@@ -15,4 +18,12 @@ export async function validateOrderAccessCode(storedHash, typedCode, expiresAtIS
 
 export async function webhookMercadoPago(event) {
   return { accepted: true, externalReference: event.external_reference ?? null };
+}
+
+export async function createMercadoPagoIntent(order) {
+  return createOrderPaymentIntent(order, mercadoPagoProvider);
+}
+
+export async function createPayPalIntent(order) {
+  return createOrderPaymentIntent(order, payPalProvider);
 }
