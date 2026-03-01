@@ -1,8 +1,12 @@
+import 'package:clickpix_ramon/core/settings/app_settings_store.dart';
 import 'package:clickpix_ramon/data/local/app_database.dart';
 import 'package:clickpix_ramon/data/repositories/local_client_repository.dart';
 import 'package:clickpix_ramon/data/repositories/local_order_repository.dart';
 import 'package:clickpix_ramon/data/repositories/local_photo_asset_repository.dart';
+import 'package:clickpix_ramon/data/services/upload_queue_service.dart';
+import 'package:clickpix_ramon/data/services/upload_worker.dart';
 import 'package:clickpix_ramon/domain/entities/order.dart' as domain;
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:photo_manager/photo_manager.dart';
@@ -20,6 +24,7 @@ class _RecentPhotosPageState extends State<RecentPhotosPage> {
   static const List<int> _timeFiltersInMinutes = [10, 30, 60];
 
   late final LocalOrderRepository _orderRepository;
+  late final UploadQueueService _uploadQueueService;
   late final LocalPhotoAssetRepository _photoRepository;
   late final LocalClientRepository _clientRepository;
 
@@ -34,7 +39,16 @@ class _RecentPhotosPageState extends State<RecentPhotosPage> {
   @override
   void initState() {
     super.initState();
-    _orderRepository = LocalOrderRepository(widget.database);
+    _uploadQueueService = UploadQueueService(
+      database: widget.database,
+      settingsStore: AppSettingsStore(widget.database),
+      networkConstraint: ConnectivityNetworkConstraint(Connectivity()),
+      syncGateway: const NoopUploadSyncGateway(),
+    );
+    _orderRepository = LocalOrderRepository(
+      widget.database,
+      uploadQueueService: _uploadQueueService,
+    );
     _photoRepository = LocalPhotoAssetRepository(widget.database);
     _clientRepository = LocalClientRepository(widget.database);
     _loadGallery();
@@ -224,6 +238,7 @@ class _RecentPhotosPageState extends State<RecentPhotosPage> {
       paymentMethod: domain.PaymentMethod.pix,
     );
     await _orderRepository.createOrder(order);
+    await _uploadQueueService.processQueue();
 
     if (!mounted) {
       return;

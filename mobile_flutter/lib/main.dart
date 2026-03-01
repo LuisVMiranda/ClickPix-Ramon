@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:clickpix_ramon/core/settings/app_settings_store.dart';
 import 'package:clickpix_ramon/data/local/app_database.dart';
+import 'package:clickpix_ramon/data/services/upload_worker.dart';
 import 'package:clickpix_ramon/presentation/recent_photos_page.dart';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
@@ -18,8 +19,10 @@ Future<void> main() async {
 
   final database = await _bootstrapDatabase();
   final appSettingsStore = AppSettingsStore(database);
+  final uploadWorkerScheduler = UploadWorkerScheduler(database);
   final locale = await appSettingsStore.loadLocale();
   final visualSettings = await appSettingsStore.loadVisualSettings();
+  await uploadWorkerScheduler.initialize();
 
   runApp(
     ClickPixApp(

@@ -1,4 +1,5 @@
 import 'package:clickpix_ramon/data/local/app_database.dart';
+import 'package:clickpix_ramon/data/services/upload_queue_service.dart';
 import 'package:clickpix_ramon/domain/entities/order.dart' as domain;
 import 'package:clickpix_ramon/domain/repositories/order_repository.dart';
 import 'package:clickpix_ramon/domain/value_objects/order_status_transition.dart';
@@ -6,8 +7,10 @@ import 'package:drift/drift.dart';
 
 class LocalOrderRepository implements OrderRepository {
   final AppDatabase _database;
+  final UploadQueueService? _uploadQueueService;
 
-  LocalOrderRepository(this._database);
+  LocalOrderRepository(this._database, {UploadQueueService? uploadQueueService})
+      : _uploadQueueService = uploadQueueService;
 
   @override
   Future<void> createOrder(domain.Order order) async {
@@ -35,6 +38,8 @@ class LocalOrderRepository implements OrderRepository {
             );
       }
     });
+
+    await _uploadQueueService?.enqueueOrderUpload(order.id);
   }
 
   int _itemUnitPrice(domain.Order order, int itemCount) {

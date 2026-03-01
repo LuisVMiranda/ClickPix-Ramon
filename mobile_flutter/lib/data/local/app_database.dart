@@ -78,12 +78,31 @@ class AppSettings extends Table {
   Set<Column<Object>> get primaryKey => {id};
 }
 
-@DriftDatabase(tables: [Clients, PhotoAssets, Orders, OrderItems, AppSettings])
+class UploadTasks extends Table {
+  TextColumn get id => text()();
+  TextColumn get orderId => text().references(Orders, #id)();
+  TextColumn get status => text()();
+  IntColumn get retryCount => integer().withDefault(const Constant(0))();
+  DateTimeColumn get nextAttemptAt => dateTime().withDefault(currentDateAndTime)();
+  TextColumn get lastError => text().nullable()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  List<Index> get indexes => [
+    Index('upload_tasks_status_next_attempt_idx', [status, nextAttemptAt]),
+    Index('upload_tasks_order_id_idx', [orderId]),
+  ];
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
+@DriftDatabase(tables: [Clients, PhotoAssets, Orders, OrderItems, AppSettings, UploadTasks])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -105,6 +124,15 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 4) {
         await m.addColumn(appSettings, appSettings.themeMode);
+      }
+      if (from < 5) {
+        await m.createTable(uploadTasks);
+        await m.customStatement(
+          'CREATE INDEX IF NOT EXISTS upload_tasks_status_next_attempt_idx ON upload_tasks (status, next_attempt_at)',
+        );
+        await m.customStatement(
+          'CREATE INDEX IF NOT EXISTS upload_tasks_order_id_idx ON upload_tasks (order_id)',
+        );
       }
     },
   );
