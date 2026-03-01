@@ -1,0 +1,23 @@
+{
+  "version": "1.0.0",
+  "states": [
+    "Created",
+    "AwaitingPayment",
+    "Paid",
+    "Delivering",
+    "Delivered",
+    "Expired",
+    "Refunded",
+    "Canceled"
+  ],
+  "transitions": {
+    "Created": ["AwaitingPayment", "Canceled"],
+    "AwaitingPayment": ["Paid", "Expired", "Canceled"],
+    "Paid": ["Delivering", "Refunded"],
+    "Delivering": ["Delivered", "Refunded"],
+    "Delivered": ["Refunded"],
+    "Expired": ["AwaitingPayment"],
+    "Refunded": [],
+    "Canceled": []
+  }
+}

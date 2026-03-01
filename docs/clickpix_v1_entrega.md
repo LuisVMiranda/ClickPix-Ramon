@@ -48,7 +48,7 @@
 **Objetivo:** eliminar ambiguidade antes de codar fluxo.
 
 **Entregáveis:**
-- Contrato de estados de pedido (`Created`, `AwaitingPayment`, `Paid`, `Delivering`, `Delivered`, `Expired`, `Refunded`, `Canceled`).
+- Contrato canônico de estados de pedido (`Created`, `AwaitingPayment`, `Paid`, `Delivering`, `Delivered`, `Expired`, `Refunded`, `Canceled`) em `docs/contracts/order_status_transitions.v1.json`.
 - Contrato dos DTOs principais (`Client`, `PhotoAsset`, `Order`, `Gallery`, `PaymentIntent`).
 - Definição padrão de `externalReference`: `PFBR-{yyyyMMdd}-{orderShortId}-{random}`.
 
