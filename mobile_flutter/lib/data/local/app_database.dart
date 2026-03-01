@@ -70,6 +70,8 @@ class AppSettings extends Table {
       text().withDefault(const Constant('{}'))();
   BoolColumn get highContrastEnabled =>
       boolean().withDefault(const Constant(false))();
+  BoolColumn get solarLargeFontEnabled =>
+      boolean().withDefault(const Constant(false))();
 
   @override
   Set<Column<Object>> get primaryKey => {id};
@@ -80,7 +82,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -96,6 +98,9 @@ class AppDatabase extends _$AppDatabase {
         await m.customStatement(
           'CREATE INDEX IF NOT EXISTS photo_assets_captured_at_idx ON photo_assets (captured_at)',
         );
+      }
+      if (from < 3) {
+        await m.addColumn(appSettings, appSettings.solarLargeFontEnabled);
       }
     },
   );

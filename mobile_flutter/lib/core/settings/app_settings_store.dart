@@ -11,9 +11,7 @@ class AppSettingsStore {
   static const Locale defaultLocale = Locale('pt', 'BR');
 
   Future<Locale> loadLocale() async {
-    final row = await (_database.select(
-      _database.appSettings,
-    )..where((tbl) => tbl.id.equals(1))).getSingleOrNull();
+    final row = await _loadSettingsRow();
 
     final rawLanguage = row?.language;
     if (rawLanguage == null || rawLanguage.isEmpty) {
@@ -25,14 +23,36 @@ class AppSettingsStore {
 
   Future<void> saveLocale(Locale locale) async {
     final languageValue = _localeToStorage(locale);
-    await _database
-        .into(_database.appSettings)
-        .insertOnConflictUpdate(
+    await _database.into(_database.appSettings).insertOnConflictUpdate(
           AppSettingsCompanion.insert(
             id: const Value(1),
             language: languageValue,
           ),
         );
+  }
+
+  Future<AppVisualSettings> loadVisualSettings() async {
+    final row = await _loadSettingsRow();
+    return AppVisualSettings(
+      highContrastEnabled: row?.highContrastEnabled ?? false,
+      solarLargeFontEnabled: row?.solarLargeFontEnabled ?? false,
+    );
+  }
+
+  Future<void> saveVisualSettings(AppVisualSettings settings) async {
+    await _database.into(_database.appSettings).insertOnConflictUpdate(
+          AppSettingsCompanion.insert(
+            id: const Value(1),
+            highContrastEnabled: Value(settings.highContrastEnabled),
+            solarLargeFontEnabled: Value(settings.solarLargeFontEnabled),
+          ),
+        );
+  }
+
+  Future<AppSetting?> _loadSettingsRow() {
+    return (_database.select(
+      _database.appSettings,
+    )..where((tbl) => tbl.id.equals(1))).getSingleOrNull();
   }
 
   Locale _localeFromStorage(String value) {
@@ -62,5 +82,25 @@ class AppSettingsStore {
     }
 
     return 'pt-BR';
+  }
+}
+
+class AppVisualSettings {
+  const AppVisualSettings({
+    required this.highContrastEnabled,
+    required this.solarLargeFontEnabled,
+  });
+
+  final bool highContrastEnabled;
+  final bool solarLargeFontEnabled;
+
+  AppVisualSettings copyWith({
+    bool? highContrastEnabled,
+    bool? solarLargeFontEnabled,
+  }) {
+    return AppVisualSettings(
+      highContrastEnabled: highContrastEnabled ?? this.highContrastEnabled,
+      solarLargeFontEnabled: solarLargeFontEnabled ?? this.solarLargeFontEnabled,
+    );
   }
 }

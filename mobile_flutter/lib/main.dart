@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:clickpix_ramon/core/settings/app_settings_store.dart';
 import 'package:clickpix_ramon/data/local/app_database.dart';
+import 'package:clickpix_ramon/presentation/recent_photos_page.dart';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -15,11 +16,13 @@ Future<void> main() async {
   final database = await _bootstrapDatabase();
   final appSettingsStore = AppSettingsStore(database);
   final locale = await appSettingsStore.loadLocale();
+  final visualSettings = await appSettingsStore.loadVisualSettings();
 
   runApp(
     ClickPixApp(
       appSettingsStore: appSettingsStore,
       initialLocale: locale,
+      initialVisualSettings: visualSettings,
     ),
   );
 }
@@ -36,11 +39,14 @@ class ClickPixApp extends StatefulWidget {
   const ClickPixApp({
     required this.appSettingsStore,
     this.initialLocale = AppSettingsStore.defaultLocale,
+    this.initialVisualSettings =
+        const AppVisualSettings(highContrastEnabled: false, solarLargeFontEnabled: false),
     super.key,
   });
 
   final AppSettingsStore appSettingsStore;
   final Locale initialLocale;
+  final AppVisualSettings initialVisualSettings;
 
   @override
   State<ClickPixApp> createState() => _ClickPixAppState();
@@ -48,15 +54,22 @@ class ClickPixApp extends StatefulWidget {
 
 class _ClickPixAppState extends State<ClickPixApp> {
   late Locale _locale;
+  late AppVisualSettings _visualSettings;
 
   @override
   void initState() {
     super.initState();
     _locale = _normalizeLocale(widget.initialLocale);
+    _visualSettings = widget.initialVisualSettings;
   }
 
   @override
   Widget build(BuildContext context) {
+    final baseTheme = ThemeData(
+      colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+      useMaterial3: true,
+    );
+
     return MaterialApp(
       locale: _locale,
       supportedLocales: const [Locale('pt', 'BR'), Locale('en'), Locale('es')],
@@ -66,10 +79,52 @@ class _ClickPixAppState extends State<ClickPixApp> {
         GlobalCupertinoLocalizations.delegate,
       ],
       title: _tr('title'),
+      theme: _buildTheme(baseTheme),
       home: QuickFlowPage(
         locale: _locale,
+        visualSettings: _visualSettings,
         onLocaleChanged: _onLocaleChanged,
+        onVisualSettingsChanged: _onVisualSettingsChanged,
         translate: _tr,
+      ),
+    );
+  }
+
+  ThemeData _buildTheme(ThemeData baseTheme) {
+    var theme = baseTheme;
+
+    if (_visualSettings.highContrastEnabled) {
+      theme = theme.copyWith(
+        colorScheme: const ColorScheme.highContrastLight(),
+      );
+    }
+
+    final textScale = _visualSettings.solarLargeFontEnabled ? 1.2 : 1.0;
+    final textTheme = theme.textTheme.apply(
+      bodyColor: theme.colorScheme.onSurface,
+      displayColor: theme.colorScheme.onSurface,
+      fontSizeFactor: textScale,
+    );
+
+    return theme.copyWith(
+      textTheme: textTheme,
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size.fromHeight(64),
+          textStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          minimumSize: const Size.fromHeight(64),
+          textStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size.fromHeight(64),
+          textStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+        ),
       ),
     );
   }
@@ -78,6 +133,11 @@ class _ClickPixAppState extends State<ClickPixApp> {
     final normalized = _normalizeLocale(locale);
     setState(() => _locale = normalized);
     await widget.appSettingsStore.saveLocale(normalized);
+  }
+
+  Future<void> _onVisualSettingsChanged(AppVisualSettings settings) async {
+    setState(() => _visualSettings = settings);
+    await widget.appSettingsStore.saveVisualSettings(settings);
   }
 
   Locale _normalizeLocale(Locale locale) {
@@ -100,46 +160,36 @@ class _ClickPixAppState extends State<ClickPixApp> {
   }
 }
 
-class QuickFlowPage extends StatefulWidget {
+class QuickFlowPage extends StatelessWidget {
   const QuickFlowPage({
     required this.locale,
+    required this.visualSettings,
     required this.onLocaleChanged,
+    required this.onVisualSettingsChanged,
     required this.translate,
     super.key,
   });
 
   final Locale locale;
+  final AppVisualSettings visualSettings;
   final Future<void> Function(Locale locale) onLocaleChanged;
+  final Future<void> Function(AppVisualSettings settings) onVisualSettingsChanged;
   final String Function(String key) translate;
 
   @override
-  State<QuickFlowPage> createState() => _QuickFlowPageState();
-}
-
-class _QuickFlowPageState extends State<QuickFlowPage> {
-  int step = 0;
-
-  @override
   Widget build(BuildContext context) {
-    final labels = [
-      widget.translate('stepGallery'),
-      widget.translate('stepOrder'),
-      widget.translate('stepPayment'),
-      widget.translate('stepDelivery'),
-    ];
-
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.translate('quickService')),
+        title: Text(translate('quickService')),
         actions: [
           DropdownButtonHideUnderline(
             child: DropdownButton<Locale>(
-              value: widget.locale.languageCode == 'pt'
+              value: locale.languageCode == 'pt'
                   ? const Locale('pt', 'BR')
-                  : Locale(widget.locale.languageCode),
+                  : Locale(locale.languageCode),
               onChanged: (value) {
                 if (value != null) {
-                  widget.onLocaleChanged(value);
+                  onLocaleChanged(value);
                 }
               },
               items: const [
@@ -154,10 +204,73 @@ class _QuickFlowPageState extends State<QuickFlowPage> {
           ),
         ],
       ),
-      body: Center(child: Text('${widget.translate('currentStep')}: ${labels[step]}')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => setState(() => step = (step + 1) % labels.length),
-        label: Text(widget.translate('continue')),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: _SettingsCard(
+              title: 'Acessibilidade',
+              subtitle: 'Contraste e leitura para uso em ambiente externo',
+              children: [
+                SwitchListTile(
+                  value: visualSettings.highContrastEnabled,
+                  title: const Text('Alto contraste'),
+                  subtitle: const Text('Aumenta diferença entre texto e fundo.'),
+                  onChanged: (value) {
+                    onVisualSettingsChanged(
+                      visualSettings.copyWith(highContrastEnabled: value),
+                    );
+                  },
+                ),
+                SwitchListTile(
+                  value: visualSettings.solarLargeFontEnabled,
+                  title: const Text('Modo Sol (fonte ampliada)'),
+                  subtitle: const Text('Melhora leitura com botões e textos maiores.'),
+                  onChanged: (value) {
+                    onVisualSettingsChanged(
+                      visualSettings.copyWith(solarLargeFontEnabled: value),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+          const Expanded(child: RecentPhotosPage()),
+        ],
+      ),
+    );
+  }
+}
+
+class _SettingsCard extends StatelessWidget {
+  const _SettingsCard({
+    required this.title,
+    required this.subtitle,
+    required this.children,
+  });
+
+  final String title;
+  final String subtitle;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 6),
+            Text(subtitle, style: Theme.of(context).textTheme.bodyLarge),
+            const SizedBox(height: 8),
+            ...children,
+          ],
+        ),
       ),
     );
   }
@@ -167,29 +280,13 @@ const Map<String, Map<String, String>> _translations = {
   'pt-BR': {
     'title': 'ClickPix Ramon',
     'quickService': 'Atendimento Rápido',
-    'currentStep': 'Etapa atual',
-    'continue': 'Continuar',
-    'stepGallery': 'Galeria',
-    'stepOrder': 'Pedido',
-    'stepPayment': 'Pagamento',
-    'stepDelivery': 'Entrega',
   },
   'en': {
     'title': 'ClickPix Ramon',
     'quickService': 'Quick Service',
-    'currentStep': 'Current step',
-    'continue': 'Continue',
-    'stepGallery': 'Gallery',
-    'stepOrder': 'Order',
-    'stepPayment': 'Payment',
   },
   'es': {
     'title': 'ClickPix Ramon',
     'quickService': 'Atención Rápida',
-    'currentStep': 'Paso actual',
-    'continue': 'Continuar',
-    'stepGallery': 'Galería',
-    'stepOrder': 'Pedido',
-    'stepPayment': 'Pago',
   },
 };
