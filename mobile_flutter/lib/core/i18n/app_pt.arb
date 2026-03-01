@@ -1,0 +1,11 @@
+{
+  "@@locale": "pt",
+  "appTitle": "ClickPix Ramon",
+  "quickService": "Atendimento Rápido",
+  "gallery": "Galeria",
+  "order": "Pedido",
+  "payment": "Pagamento",
+  "delivery": "Entrega",
+  "mockPaid": "Pagamento confirmado (mock)",
+  "continueLabel": "Continuar"
+}

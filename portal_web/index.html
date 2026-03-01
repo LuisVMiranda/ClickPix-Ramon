@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Galeria ClickPix</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; }
+    .card { max-width: 460px; padding: 16px; border: 1px solid #ddd; border-radius: 10px; }
+    input, button { padding: 10px; width: 100%; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Acessar galeria</h1>
+    <p>Digite o código de 6 dígitos recebido.</p>
+    <input id="code" maxlength="6" placeholder="483920" />
+    <button onclick="validate()">Validar</button>
+    <pre id="out"></pre>
+  </div>
+  <script>
+    async function validate() {
+      const code = document.getElementById('code').value;
+      const ok = /^\d{6}$/.test(code);
+      document.getElementById('out').textContent = ok
+        ? 'Código válido (mock). Exibir lista de fotos aqui.'
+        : 'Código inválido.';
+    }
+  </script>
+</body>
+</html>

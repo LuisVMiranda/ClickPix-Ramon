@@ -1,0 +1,12 @@
+{
+  "name": "clickpix-functions",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "build": "echo skeleton"
+  },
+  "dependencies": {
+    "argon2": "^0.40.3"
+  }
+}
