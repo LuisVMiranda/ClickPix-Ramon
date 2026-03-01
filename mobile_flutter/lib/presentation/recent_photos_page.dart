@@ -151,7 +151,7 @@ class _PhotoTile extends StatelessWidget {
                     color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant,
                   ),
                   const Spacer(),
-                  Icon(Icons.image_outlined, size: 28, color: colorScheme.onSurfaceVariant),
+                  _GalleryThumbnail(photo: photo),
                 ],
               ),
               const Spacer(),
@@ -174,9 +174,44 @@ class _PhotoTile extends StatelessWidget {
   }
 }
 
+class _GalleryThumbnail extends StatelessWidget {
+  const _GalleryThumbnail({required this.photo});
+
+  final _RecentPhotoItem photo;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 44,
+        height: 44,
+        color: Theme.of(context).colorScheme.surface,
+        child: photo.thumbnailProvider != null
+            ? Image(
+                image: ResizeImage(photo.thumbnailProvider!, width: 176, height: 176),
+                fit: BoxFit.cover,
+                filterQuality: FilterQuality.low,
+                gaplessPlayback: true,
+              )
+            : Icon(
+                Icons.image_outlined,
+                size: 24,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+      ),
+    );
+  }
+}
+
 class _RecentPhotoItem {
-  const _RecentPhotoItem({required this.id, required this.minutesAgo});
+  const _RecentPhotoItem({
+    required this.id,
+    required this.minutesAgo,
+    this.thumbnailProvider,
+  });
 
   final String id;
   final int minutesAgo;
+  final ImageProvider? thumbnailProvider;
 }
