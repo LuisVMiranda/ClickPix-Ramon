@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  finalizeOrderDelivery,
   generateOrderAccessCode,
   renewOrderAccessCode,
   validateAccessEndpoint,
@@ -38,7 +39,7 @@ test('renewOrderAccessCode invalidates previous code and rotates hash', async ()
   assert.equal(oldCodeAgainstNewHash.reason, 'invalid_code');
 });
 
-test('validateAccessEndpoint returns signed temporary download URL when code is valid', async () => {
+test('validateAccessEndpoint returns signed temporary download URLs when code is valid', async () => {
   const created = await generateOrderAccessCode('order-3', 2);
   const response = await validateAccessEndpoint(
     {
@@ -46,7 +47,6 @@ test('validateAccessEndpoint returns signed temporary download URL when code is 
       body: {
         orderId: 'order-3',
         code: created.code,
-        assetPath: 'galleries/order-3/photo.jpg',
       },
     },
     {
@@ -55,11 +55,17 @@ test('validateAccessEndpoint returns signed temporary download URL when code is 
           if (id !== 'order-3') {
             return null;
           }
-          return { delivery: { galleryId: 'gallery-3', access: created.access } };
+          return {
+            delivery: {
+              galleryId: 'gallery-3',
+              access: created.access,
+              assets: [{ fileName: 'photo.jpg', path: 'galleries/order-3/photo.jpg' }],
+            },
+          };
         },
       },
-      async signDownloadUrl({ orderId, assetPath, expiresInSeconds }) {
-        return `https://download.test/${orderId}/${assetPath}?ttl=${expiresInSeconds}`;
+      async signDownloadUrl({ path, expiresInSeconds }) {
+        return `https://download.test/${path}?ttl=${expiresInSeconds}`;
       },
     },
   );
@@ -67,7 +73,8 @@ test('validateAccessEndpoint returns signed temporary download URL when code is 
   assert.equal(response.status, 200);
   assert.equal(response.body.ok, true);
   assert.equal(response.body.galleryId, 'gallery-3');
-  assert.match(response.body.signedDownloadUrl, /^https:\/\/download\.test/);
+  assert.equal(response.body.assets.length, 1);
+  assert.match(response.body.assets[0].signedDownloadUrl, /^https:\/\/download\.test/);
 });
 
 test('validateAccessEndpoint distinguishes invalid code and expired code', async () => {
@@ -81,7 +88,7 @@ test('validateAccessEndpoint distinguishes invalid code and expired code', async
   const invalidCodeResponse = await validateAccessEndpoint(
     {
       method: 'POST',
-      body: { orderId: 'order-4', code: '999999', assetPath: 'a.jpg' },
+      body: { orderId: 'order-4', code: '999999' },
     },
     {
       ordersStore: {
@@ -98,7 +105,7 @@ test('validateAccessEndpoint distinguishes invalid code and expired code', async
   const expiredCodeResponse = await validateAccessEndpoint(
     {
       method: 'POST',
-      body: { orderId: 'order-4', code: created.code, assetPath: 'a.jpg' },
+      body: { orderId: 'order-4', code: created.code },
     },
     {
       ordersStore: {
@@ -111,4 +118,34 @@ test('validateAccessEndpoint distinguishes invalid code and expired code', async
 
   assert.equal(expiredCodeResponse.status, 410);
   assert.equal(expiredCodeResponse.body.reason, 'expired');
+});
+
+test('finalizeOrderDelivery persists hash metadata, storage prefix and uploaded assets', async () => {
+  const saved = [];
+
+  const result = await finalizeOrderDelivery({
+    orderId: 'order-55',
+    expirationDays: 5,
+    assets: [{ fileName: 'x.jpg', base64Data: Buffer.from('img').toString('base64') }],
+    ordersStore: {
+      async findById() {
+        return { id: 'order-55', delivery: { galleryId: 'gallery-55' } };
+      },
+      async saveDelivery(orderId, delivery) {
+        saved.push({ orderId, delivery });
+      },
+    },
+    async uploadAssets() {
+      return [{ fileName: 'x.jpg', path: 'galleries/order-55/x.jpg' }];
+    },
+  });
+
+  assert.equal(result.ok, true);
+  assert.match(result.code, /^\d{6}$/);
+  assert.equal(result.storagePrefix, 'galleries/order-55/');
+  assert.equal(saved.length, 1);
+  assert.equal(saved[0].delivery.storagePrefix, 'galleries/order-55/');
+  assert.ok(saved[0].delivery.access.hash);
+  assert.ok(saved[0].delivery.access.expiresAt);
+  assert.equal(saved[0].delivery.access.version, 1);
 });

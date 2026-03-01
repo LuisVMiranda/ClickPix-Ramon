@@ -3,52 +3,205 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Galeria ClickPix</title>
+  <title>ClickPix Portal</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 24px; background: #fafafa; }
-    .card { max-width: 520px; padding: 16px; border: 1px solid #ddd; border-radius: 10px; background: #fff; }
-    input, button { padding: 10px; width: 100%; margin-top: 8px; border-radius: 8px; border: 1px solid #c8c8c8; }
-    button { background: #3f51b5; color: #fff; border: none; font-weight: bold; cursor: pointer; }
-    button:hover { background: #33429a; }
-    .hint { color: #666; font-size: 14px; }
-    .status { margin-top: 12px; padding: 10px; border-radius: 8px; font-size: 14px; }
-    .status.error { background: #ffebee; color: #c62828; }
-    .status.success { background: #e8f5e9; color: #2e7d32; }
+    :root {
+      color-scheme: light;
+      font-family: Inter, Arial, sans-serif;
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #f3f4f7;
+      display: flex;
+      justify-content: center;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    .card {
+      width: min(760px, 100%);
+      background: #fff;
+      border: 1px solid #e3e6ec;
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+      align-items: end;
+    }
+    label { font-size: 14px; color: #4f5663; display: block; }
+    input, button {
+      width: 100%;
+      box-sizing: border-box;
+      border-radius: 10px;
+      border: 1px solid #cdd3df;
+      padding: 10px;
+      margin-top: 6px;
+      font-size: 15px;
+    }
+    button {
+      background: #3949ab;
+      color: #fff;
+      border: 0;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:hover { background: #2f3e96; }
+    .hint { margin-top: 8px; color: #5c6473; }
+    .status {
+      margin-top: 14px;
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 14px;
+    }
+    .error { background: #ffebee; color: #b71c1c; }
+    .success { background: #e8f5e9; color: #1b5e20; }
     .hidden { display: none; }
+    ul { list-style: none; padding: 0; margin: 16px 0 0; display: grid; gap: 8px; }
+    .asset-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      border: 1px solid #e6e9f0;
+      border-radius: 10px;
+      padding: 10px;
+      flex-wrap: wrap;
+    }
+    .asset-item a { color: #2c3faa; font-weight: 600; text-decoration: none; }
+    @media (max-width: 480px) {
+      body { padding: 12px; }
+      .card { padding: 12px; }
+    }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>Acessar galeria</h1>
-    <p class="hint">Digite o ID do pedido e o código de 6 dígitos recebido.</p>
+  <section class="card">
+    <h1 id="title"></h1>
+    <p id="hint" class="hint"></p>
 
-    <input id="orderId" placeholder="order-123" />
-    <input id="assetPath" placeholder="galleries/order-123/foto-01.jpg" />
-    <input id="code" maxlength="6" placeholder="483920" inputmode="numeric" />
-    <button onclick="validateAccess()">Validar e liberar download</button>
+    <div class="grid">
+      <label>
+        <span id="orderIdLabel"></span>
+        <input id="orderId" placeholder="order-123" />
+      </label>
+      <label>
+        <span id="codeLabel"></span>
+        <input id="code" maxlength="6" placeholder="483920" inputmode="numeric" />
+      </label>
+      <button id="validateBtn" type="button" onclick="validateAccess()"></button>
+    </div>
 
     <div id="status" class="status hidden"></div>
-    <a id="downloadLink" class="hidden" target="_blank" rel="noopener noreferrer">Baixar arquivo temporário</a>
-  </div>
+    <ul id="assets" class="hidden"></ul>
+  </section>
 
   <script>
     const ENDPOINT = '/portal/validate-access';
+    const locale = (navigator.language || 'pt-BR').toLowerCase();
+    const fallback = 'pt';
 
-    function setStatus(message, type) {
+    const messages = {
+      pt: {
+        title: 'Acessar galeria',
+        hint: 'Digite o ID do pedido e o código de 6 dígitos recebido.',
+        orderIdLabel: 'ID do pedido',
+        codeLabel: 'Código',
+        validateBtn: 'Validar acesso',
+        invalidPayload: 'Preencha pedido e código de 6 dígitos válido.',
+        expired: 'Código expirado. Solicite um novo código ao fotógrafo.',
+        invalidCode: 'Código inválido. Confira os 6 dígitos e tente novamente.',
+        genericError: 'Não foi possível validar seu acesso.',
+        connectionError: 'Falha de conexão com o servidor. Tente novamente.',
+        success: (seconds) => `Acesso liberado! Links válidos por ${Math.ceil(seconds / 60)} min.`,
+        download: 'Baixar',
+      },
+      en: {
+        title: 'Access gallery',
+        hint: 'Enter your order id and the 6-digit code.',
+        orderIdLabel: 'Order id',
+        codeLabel: 'Code',
+        validateBtn: 'Validate access',
+        invalidPayload: 'Fill order id and a valid 6-digit code.',
+        expired: 'Code expired. Ask the photographer for a new code.',
+        invalidCode: 'Invalid code. Check the 6 digits and try again.',
+        genericError: 'Unable to validate your access.',
+        connectionError: 'Connection failed. Please try again.',
+        success: (seconds) => `Access granted! Links expire in ${Math.ceil(seconds / 60)} min.`,
+        download: 'Download',
+      },
+      es: {
+        title: 'Acceder a galería',
+        hint: 'Ingresa el ID del pedido y el código de 6 dígitos.',
+        orderIdLabel: 'ID del pedido',
+        codeLabel: 'Código',
+        validateBtn: 'Validar acceso',
+        invalidPayload: 'Completa el pedido y un código válido de 6 dígitos.',
+        expired: 'Código vencido. Pide un nuevo código al fotógrafo.',
+        invalidCode: 'Código inválido. Verifica los 6 dígitos e inténtalo de nuevo.',
+        genericError: 'No fue posible validar tu acceso.',
+        connectionError: 'Error de conexión con el servidor. Inténtalo nuevamente.',
+        success: (seconds) => `¡Acceso liberado! Enlaces válidos por ${Math.ceil(seconds / 60)} min.`,
+        download: 'Descargar',
+      },
+    };
+
+    function getStrings() {
+      const short = locale.startsWith('en') ? 'en' : locale.startsWith('es') ? 'es' : fallback;
+      return messages[short] || messages[fallback];
+    }
+
+    function hydrateLabels() {
+      const t = getStrings();
+      document.getElementById('title').textContent = t.title;
+      document.getElementById('hint').textContent = t.hint;
+      document.getElementById('orderIdLabel').textContent = t.orderIdLabel;
+      document.getElementById('codeLabel').textContent = t.codeLabel;
+      document.getElementById('validateBtn').textContent = t.validateBtn;
+    }
+
+    function setStatus(message, isError) {
       const status = document.getElementById('status');
-      status.className = `status ${type}`;
+      status.className = `status ${isError ? 'error' : 'success'}`;
       status.textContent = message;
+      status.classList.remove('hidden');
+    }
+
+    function renderAssets(assets = []) {
+      const list = document.getElementById('assets');
+      const t = getStrings();
+      list.innerHTML = '';
+
+      assets.forEach((asset) => {
+        const li = document.createElement('li');
+        li.className = 'asset-item';
+        const name = document.createElement('span');
+        name.textContent = asset.fileName;
+        const link = document.createElement('a');
+        link.href = asset.signedDownloadUrl;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.textContent = t.download;
+        li.appendChild(name);
+        li.appendChild(link);
+        list.appendChild(li);
+      });
+
+      list.classList.toggle('hidden', assets.length === 0);
     }
 
     async function validateAccess() {
+      const t = getStrings();
       const orderId = document.getElementById('orderId').value.trim();
       const code = document.getElementById('code').value.trim();
-      const assetPath = document.getElementById('assetPath').value.trim();
-      const downloadLink = document.getElementById('downloadLink');
-      downloadLink.classList.add('hidden');
 
-      if (!orderId || !assetPath || !/^\d{6}$/.test(code)) {
-        setStatus('Preencha pedido, arquivo e código de 6 dígitos válido.', 'error');
+      renderAssets([]);
+
+      if (!orderId || !/^\d{6}$/.test(code)) {
+        setStatus(t.invalidPayload, true);
         return;
       }
 
@@ -56,31 +209,29 @@
         const response = await fetch(ENDPOINT, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ orderId, code, assetPath }),
+          body: JSON.stringify({ orderId, code }),
         });
         const payload = await response.json();
 
         if (!response.ok) {
           if (payload.reason === 'expired') {
-            setStatus('Código expirado. Solicite um novo código ao fotógrafo.', 'error');
+            setStatus(t.expired, true);
           } else if (payload.reason === 'invalid_code') {
-            setStatus('Código inválido. Confira os 6 dígitos e tente novamente.', 'error');
+            setStatus(t.invalidCode, true);
           } else {
-            setStatus(payload.message || 'Não foi possível validar seu acesso.', 'error');
+            setStatus(t.genericError, true);
           }
           return;
         }
 
-        setStatus(`Acesso liberado! Link válido por ${payload.downloadExpiresInSeconds}s.`, 'success');
-        if (payload.signedDownloadUrl) {
-          downloadLink.href = payload.signedDownloadUrl;
-          downloadLink.textContent = 'Baixar arquivo temporário';
-          downloadLink.classList.remove('hidden');
-        }
-      } catch (error) {
-        setStatus('Falha de conexão com o servidor. Tente novamente.', 'error');
+        setStatus(t.success(payload.downloadExpiresInSeconds), false);
+        renderAssets(payload.assets || []);
+      } catch {
+        setStatus(t.connectionError, true);
       }
     }
+
+    hydrateLabels();
   </script>
 </body>
 </html>

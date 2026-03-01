@@ -2,6 +2,13 @@ import crypto from 'node:crypto';
 import { onRequest } from 'firebase-functions/v2/https';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
+import {
+  buildGalleryDownloadItems,
+  createStoragePrefix,
+  deliverOrderAssets,
+  listGalleryAssets,
+  signDownloadUrl,
+} from './storage/deliveryStorage.js';
 import { generateAccessCode, hashAccessCode, verifyAccessCode } from './shared/accessCode.js';
 import { createOrderPaymentIntent } from './orders/paymentIntentService.js';
 import { canTransition } from './orders/statusMachine.js';
@@ -50,7 +57,6 @@ export async function generateOrderAccessCode(orderId, expirationDays = 7) {
   };
 }
 
-
 export async function renewOrderAccessCode(previousAccess = {}, expirationDays = 7) {
   const code = generateAccessCode();
   const hash = await hashAccessCode(code);
@@ -82,6 +88,40 @@ export async function validateOrderAccessCode(access, typedCode) {
   return { valid: ok, reason: ok ? 'ok' : 'invalid_code' };
 }
 
+export async function finalizeOrderDelivery({
+  orderId,
+  expirationDays = 7,
+  assets = [],
+  ordersStore = defaultOrdersStore,
+  uploadAssets = deliverOrderAssets,
+}) {
+  const order = await ordersStore.findById(orderId);
+  if (!order) {
+    return { ok: false, reason: 'order_not_found' };
+  }
+
+  const generated = await generateOrderAccessCode(orderId, expirationDays);
+  const storagePrefix = createStoragePrefix(orderId);
+  const uploadedAssets = await uploadAssets({ orderId, storagePrefix, assets });
+
+  await ordersStore.saveDelivery(orderId, {
+    storagePrefix,
+    galleryId: order.delivery?.galleryId ?? orderId,
+    access: generated.access,
+    assets: uploadedAssets,
+    deliveredAt: new Date().toISOString(),
+  });
+
+  return {
+    ok: true,
+    orderId,
+    code: generated.code,
+    storagePrefix,
+    assets: uploadedAssets,
+    expiresAt: generated.access.expiresAt,
+  };
+}
+
 export async function validateAccessEndpoint(request, options = {}) {
   if (request?.method !== 'POST') {
     return { status: 405, body: { ok: false, reason: 'method_not_allowed' } };
@@ -89,7 +129,6 @@ export async function validateAccessEndpoint(request, options = {}) {
 
   const orderId = String(request?.body?.orderId ?? '').trim();
   const typedCode = String(request?.body?.code ?? '').trim();
-  const assetPath = String(request?.body?.assetPath ?? '').trim();
   if (!orderId || !/^\d{6}$/.test(typedCode)) {
     return { status: 400, body: { ok: false, reason: 'invalid_payload' } };
   }
@@ -107,7 +146,18 @@ export async function validateAccessEndpoint(request, options = {}) {
     };
   }
 
-  const signedDownloadUrl = await options.signDownloadUrl?.({ orderId, assetPath, expiresInSeconds: 300 });
+  const assets = await (options.listGalleryAssets ?? listGalleryAssets)({
+    orderId,
+    storagePrefix: order.delivery.storagePrefix,
+    fallbackAssets: order.delivery.assets,
+  });
+
+  const downloads = await buildGalleryDownloadItems({
+    orderId,
+    assets,
+    expiresInSeconds: 300,
+    signDownloadUrl: options.signDownloadUrl ?? signDownloadUrl,
+  });
 
   return {
     status: 200,
@@ -115,7 +165,7 @@ export async function validateAccessEndpoint(request, options = {}) {
       ok: true,
       orderId,
       galleryId: order.delivery.galleryId,
-      signedDownloadUrl: signedDownloadUrl ?? null,
+      assets: downloads,
       downloadExpiresInSeconds: 300,
     },
   };
@@ -314,6 +364,33 @@ export const createPaymentIntent = onRequest(async (req, res) => {
   await defaultOrdersStore.savePaymentIntent(orderId, paymentIntent);
 
   res.status(201).json({ ok: true, paymentIntent });
+});
+
+export const confirmOrderDelivery = onRequest(async (req, res) => {
+  if (req.method !== 'POST') {
+    res.status(405).json({ ok: false, reason: 'method_not_allowed' });
+    return;
+  }
+
+  const orderId = String(req.path.split('/')[2] ?? req.body?.orderId ?? '').trim();
+  const expirationDays = Number(req.body?.expirationDays ?? 7);
+  if (!orderId || Number.isNaN(expirationDays) || expirationDays <= 0) {
+    res.status(400).json({ ok: false, reason: 'invalid_payload' });
+    return;
+  }
+
+  const result = await finalizeOrderDelivery({
+    orderId,
+    expirationDays,
+    assets: Array.isArray(req.body?.assets) ? req.body.assets : [],
+  });
+
+  if (!result.ok) {
+    res.status(404).json(result);
+    return;
+  }
+
+  res.status(200).json(result);
 });
 
 export const mercadoPagoWebhook = onRequest(async (req, res) => {

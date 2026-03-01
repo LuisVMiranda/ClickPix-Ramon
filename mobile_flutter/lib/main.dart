@@ -283,43 +283,82 @@ class QuickFlowPage extends StatelessWidget {
   }
 }
 
-class DeliveryActionsCard extends StatelessWidget {
+class DeliveryActionsCard extends StatefulWidget {
   const DeliveryActionsCard({super.key});
 
-  static const _samplePhone = '5511999999999';
-  static const _sampleEmail = 'cliente@clickpix.app';
-  static const _sampleLink = 'https://clickpix.app/gallery/order-123';
-  static const _sampleCode = '483920';
+  @override
+  State<DeliveryActionsCard> createState() => _DeliveryActionsCardState();
+}
+
+class _DeliveryActionsCardState extends State<DeliveryActionsCard> {
+  final _phoneController = TextEditingController(text: '5511999999999');
+  final _linkController = TextEditingController(text: 'https://clickpix.app/gallery/order-123');
+  final _codeController = TextEditingController(text: '483920');
+
+  @override
+  void dispose() {
+    _phoneController.dispose();
+    _linkController.dispose();
+    _codeController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final message = l10n.deliveryTemplate(_sampleLink, _sampleCode);
+    final message = l10n.deliveryTemplate(_linkController.text.trim(), _codeController.text.trim());
 
     return _SettingsCard(
       title: l10n.deliveryActionsTitle,
       subtitle: l10n.deliveryActionsSubtitle,
       children: [
-        FilledButton.icon(
-          onPressed: () => _openWhatsApp(message),
-          icon: const Icon(Icons.chat),
-          label: Text(l10n.openWhatsApp),
+        Text(l10n.deliveryReadyMessage),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _phoneController,
+          keyboardType: TextInputType.phone,
+          decoration: InputDecoration(
+            border: const OutlineInputBorder(),
+            labelText: l10n.clientPhoneLabel,
+          ),
+          onChanged: (_) => setState(() {}),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _linkController,
+          decoration: InputDecoration(
+            border: const OutlineInputBorder(),
+            labelText: l10n.deliveryLinkLabel,
+          ),
+          onChanged: (_) => setState(() {}),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _codeController,
+          keyboardType: TextInputType.number,
+          maxLength: 6,
+          decoration: InputDecoration(
+            border: const OutlineInputBorder(),
+            labelText: l10n.deliveryCodeLabel,
+            counterText: '',
+          ),
+          onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: 8),
         FilledButton.icon(
-          onPressed: () => _openEmail(l10n, message),
-          icon: const Icon(Icons.email),
-          label: Text(l10n.openEmail),
+          onPressed: () => _openWhatsApp(context, message),
+          icon: const Icon(Icons.chat),
+          label: Text(l10n.openWhatsAppTemplate),
         ),
         const SizedBox(height: 8),
         OutlinedButton.icon(
-          onPressed: () => _copy(context, _sampleLink, l10n.copiedLink),
+          onPressed: () => _copy(context, _linkController.text.trim(), l10n.copiedLink),
           icon: const Icon(Icons.link),
           label: Text(l10n.copyLink),
         ),
         const SizedBox(height: 8),
         OutlinedButton.icon(
-          onPressed: () => _copy(context, _sampleCode, l10n.copiedCode),
+          onPressed: () => _copy(context, _codeController.text.trim(), l10n.copiedCode),
           icon: const Icon(Icons.pin),
           label: Text(l10n.copyCode),
         ),
@@ -327,25 +366,38 @@ class DeliveryActionsCard extends StatelessWidget {
     );
   }
 
-  Future<void> _openWhatsApp(String message) async {
-    final encodedMessage = Uri.encodeComponent(message);
-    final uri = Uri.parse('https://wa.me/$_samplePhone?text=$encodedMessage');
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
-  }
+  Future<void> _openWhatsApp(BuildContext context, String message) async {
+    final l10n = AppLocalizations.of(context)!;
+    final phone = _phoneController.text.replaceAll(RegExp(r'\D'), '');
+    final link = _linkController.text.trim();
+    final code = _codeController.text.trim();
 
-  Future<void> _openEmail(AppLocalizations l10n, String message) async {
-    final encodedSubject = Uri.encodeComponent('ClickPix - ${l10n.delivery}');
-    final encodedBody = Uri.encodeComponent(message);
-    final uri = Uri.parse('mailto:$_sampleEmail?subject=$encodedSubject&body=$encodedBody');
-    await launchUrl(uri);
+    if (phone.isEmpty || link.isEmpty || !RegExp(r'^\d{6}$').hasMatch(code)) {
+      _showSnackBar(context, l10n.missingDeliveryData);
+      return;
+    }
+
+    final encodedMessage = Uri.encodeComponent(l10n.deliveryTemplate(link, code));
+    final uri = Uri.parse('https://wa.me/$phone?text=$encodedMessage');
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && context.mounted) {
+      _showSnackBar(context, l10n.cannotOpenWhatsApp);
+    }
   }
 
   Future<void> _copy(BuildContext context, String value, String successText) async {
+    if (value.isEmpty) {
+      return;
+    }
     await Clipboard.setData(ClipboardData(text: value));
     if (!context.mounted) {
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(successText)));
+    _showSnackBar(context, successText);
+  }
+
+  void _showSnackBar(BuildContext context, String text) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 }
 

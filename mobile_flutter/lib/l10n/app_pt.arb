@@ -78,5 +78,12 @@
   "clientNameLabel": "Nome do cliente",
   "clientWhatsAppLabel": "WhatsApp",
   "clientEmailLabel": "E-mail (opcional)",
-  "createClientAndContinue": "Criar cliente e continuar"
+  "createClientAndContinue": "Criar cliente e continuar",
+  "deliveryLinkLabel": "Link da galeria",
+  "deliveryCodeLabel": "Código de acesso",
+  "clientPhoneLabel": "Telefone WhatsApp",
+  "deliveryReadyMessage": "Entrega pronta para envio ao cliente.",
+  "openWhatsAppTemplate": "Abrir WhatsApp com mensagem",
+  "missingDeliveryData": "Preencha link, código e telefone para compartilhar no WhatsApp.",
+  "cannotOpenWhatsApp": "Não foi possível abrir o WhatsApp no dispositivo."
 }

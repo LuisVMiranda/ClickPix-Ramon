@@ -53,6 +53,17 @@ export class FirestoreOrdersStore {
       { merge: true },
     );
   }
+
+  async saveDelivery(orderId, delivery) {
+    await this.firestore.collection('orders').doc(orderId).set(
+      {
+        delivery,
+        status: 'Delivered',
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+  }
 }
 
 export class FirestorePaymentEventsStore {
