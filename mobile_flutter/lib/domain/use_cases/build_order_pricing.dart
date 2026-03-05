@@ -21,7 +21,7 @@ class BuildOrderPricing {
         discount != null && photoCount >= discount.minimumQuantity && discount.percentage > 0;
 
     final discountAmountCents = hasAutomaticDiscount
-        ? (subtotalCents * discount!.percentage / 100).round()
+        ? (subtotalCents * discount.percentage / 100).round()
         : 0;
     final totalCents = max(0, subtotalCents - discountAmountCents);
 

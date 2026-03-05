@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:clickpix_ramon/core/settings/watermark_config.dart';
 import 'package:clickpix_ramon/data/local/app_database.dart';
 import 'package:drift/drift.dart';
@@ -28,7 +26,7 @@ class AppSettingsStore {
     await _database.into(_database.appSettings).insertOnConflictUpdate(
           AppSettingsCompanion.insert(
             id: const Value(1),
-            language: languageValue,
+            language: Value(languageValue),
           ),
         );
   }
@@ -82,7 +80,7 @@ class AppSettingsStore {
     await _database.into(_database.appSettings).insertOnConflictUpdate(
           AppSettingsCompanion.insert(
             id: const Value(1),
-            watermarkConfigJson: config.toJson(),
+            watermarkConfigJson: Value(config.toJson()),
           ),
         );
   }

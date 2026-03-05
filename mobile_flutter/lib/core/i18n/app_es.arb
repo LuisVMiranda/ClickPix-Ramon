@@ -2,10 +2,88 @@
   "@@locale": "es",
   "appTitle": "ClickPix Ramon",
   "quickService": "Atención Rápida",
-  "gallery": "Galería",
-  "order": "Pedido",
-  "payment": "Pago",
   "delivery": "Entrega",
-  "mockPaid": "Pago confirmado (mock)",
-  "continueLabel": "Continuar"
+  "accessibilityTitle": "Accesibilidad",
+  "accessibilitySubtitle": "Contraste y lectura para uso en exteriores",
+  "highContrast": "Alto contraste",
+  "highContrastDescription": "Aumenta la diferencia entre texto y fondo.",
+  "solarMode": "Modo Sol",
+  "solarModeDescription": "Preset visual con tipografía mayor, botones más grandes y contraste reforzado.",
+  "themeModeLabel": "Tema",
+  "themeModeDescription": "Elige modo claro, oscuro o automático del sistema.",
+  "themeModeSystem": "Sistema",
+  "themeModeLight": "Claro",
+  "themeModeDark": "Oscuro",
+  "deliveryActionsTitle": "Acciones para el cliente",
+  "deliveryActionsSubtitle": "Comparte la galería por WhatsApp o correo con un toque.",
+  "deliveryTemplate": "¡Hola! Tu galería está lista: {link} | Código: {code}",
+  "@deliveryTemplate": {
+    "placeholders": {
+      "link": {},
+      "code": {}
+    }
+  },
+  "openWhatsApp": "Abrir WhatsApp",
+  "openEmail": "Abrir correo",
+  "copyLink": "Copiar enlace",
+  "copyCode": "Copiar código",
+  "copiedLink": "Enlace copiado.",
+  "copiedCode": "Código copiado.",
+  "latestPhotos": "Últimas fotos",
+  "minutesFilter": "{minutes} min",
+  "@minutesFilter": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "noPhotosInSelectedPeriod": "No hay fotos en el período seleccionado.",
+  "quickSelection": "Selección rápida ({count})",
+  "@quickSelection": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "photoCapturedMinutesAgo": "capturada hace {minutes} min",
+  "@photoCapturedMinutesAgo": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "refreshGallery": "Actualizar galería",
+  "galleryPermissionRequired": "Se requiere permiso de fotos para cargar la galería.",
+  "createOrderWithSelection": "Crear pedido ({count})",
+  "@createOrderWithSelection": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "orderCreatedOffline": "Pedido guardado sin conexión con {count} fotos.",
+  "@orderCreatedOffline": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selectOrCreateClient": "Seleccionar o crear cliente",
+  "newClient": "Nuevo cliente",
+  "clientNameLabel": "Nombre del cliente",
+  "clientWhatsAppLabel": "WhatsApp",
+  "clientEmailLabel": "Correo (opcional)",
+  "createClientAndContinue": "Crear cliente y continuar",
+  "deliveryLinkLabel": "Enlace de galería",
+  "deliveryCodeLabel": "Código de acceso",
+  "clientPhoneLabel": "Teléfono de WhatsApp",
+  "deliveryReadyMessage": "Entrega lista para compartir con el cliente.",
+  "openWhatsAppTemplate": "Abrir WhatsApp con plantilla",
+  "missingDeliveryData": "Completa enlace, código y teléfono para compartir por WhatsApp.",
+  "cannotOpenWhatsApp": "No se pudo abrir WhatsApp en este dispositivo."
 }

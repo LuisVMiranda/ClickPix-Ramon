@@ -18,7 +18,7 @@ void main() {
 
   Future<void> seedOrder(String orderId) async {
     await database.into(database.clients).insert(
-          const ClientsCompanion.insert(
+          ClientsCompanion.insert(
             id: 'client-1',
             name: 'Client One',
             whatsapp: '+5511999999999',

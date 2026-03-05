@@ -2380,12 +2380,33 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $OrderItemsTable orderItems = $OrderItemsTable(this);
   late final $AppSettingsTable appSettings = $AppSettingsTable(this);
   late final $UploadTasksTable uploadTasks = $UploadTasksTable(this);
+  late final Index photoAssetsCapturedAtIdx = Index(
+      'photo_assets_captured_at_idx',
+      'CREATE INDEX photo_assets_captured_at_idx ON photo_assets (captured_at)');
+  late final Index ordersStatusCreatedAtIdx = Index(
+      'orders_status_created_at_idx',
+      'CREATE INDEX orders_status_created_at_idx ON orders (status, created_at)');
+  late final Index uploadTasksStatusNextAttemptIdx = Index(
+      'upload_tasks_status_next_attempt_idx',
+      'CREATE INDEX upload_tasks_status_next_attempt_idx ON upload_tasks (status, next_attempt_at)');
+  late final Index uploadTasksOrderIdIdx = Index('upload_tasks_order_id_idx',
+      'CREATE INDEX upload_tasks_order_id_idx ON upload_tasks (order_id)');
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities =>
-      [clients, photoAssets, orders, orderItems, appSettings, uploadTasks];
+  List<DatabaseSchemaEntity> get allSchemaEntities => [
+        clients,
+        photoAssets,
+        orders,
+        orderItems,
+        appSettings,
+        uploadTasks,
+        photoAssetsCapturedAtIdx,
+        ordersStatusCreatedAtIdx,
+        uploadTasksStatusNextAttemptIdx,
+        uploadTasksOrderIdIdx
+      ];
 }
 
 typedef $$ClientsTableCreateCompanionBuilder = ClientsCompanion Function({

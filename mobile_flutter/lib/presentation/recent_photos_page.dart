@@ -8,7 +8,8 @@ import 'package:clickpix_ramon/data/services/upload_worker.dart';
 import 'package:clickpix_ramon/domain/entities/order.dart' as domain;
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:flutter/services.dart';
+import 'package:clickpix_ramon/core/i18n/app_localizations.dart';
 import 'package:photo_manager/photo_manager.dart';
 
 class RecentPhotosPage extends StatefulWidget {
@@ -56,7 +57,17 @@ class _RecentPhotosPageState extends State<RecentPhotosPage> {
 
   Future<void> _loadGallery() async {
     setState(() => _isLoading = true);
-    final permissionState = await PhotoManager.requestPermissionExtend();
+    PermissionState permissionState;
+    try {
+      permissionState = await PhotoManager.requestPermissionExtend().timeout(
+        const Duration(seconds: 2),
+        onTimeout: () => PermissionState.denied,
+      );
+    } on MissingPluginException {
+      permissionState = PermissionState.denied;
+    } on Object {
+      permissionState = PermissionState.denied;
+    }
     if (!permissionState.isAuth) {
       if (mounted) {
         setState(() {
@@ -290,11 +301,9 @@ class _PhotoTile extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(14),
-              child: AssetEntityImage(
-                photo.asset,
-                thumbnailSize: const ThumbnailSize(256, 256),
-                fit: BoxFit.cover,
-                isOriginal: false,
+              child: _AssetThumbnail(
+                asset: photo.asset,
+                borderRadius: BorderRadius.circular(14),
               ),
             ),
             Positioned(
@@ -308,6 +317,41 @@ class _PhotoTile extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _AssetThumbnail extends StatelessWidget {
+  const _AssetThumbnail({
+    required this.asset,
+    required this.borderRadius,
+  });
+
+  final AssetEntity asset;
+  final BorderRadius borderRadius;
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Uint8List?>(
+      future: asset.thumbnailDataWithSize(const ThumbnailSize(256, 256)),
+      builder: (context, snapshot) {
+        final data = snapshot.data;
+        if (data == null || data.isEmpty) {
+          return DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: borderRadius,
+              color: Theme.of(context).colorScheme.surfaceContainer,
+            ),
+            child: const Center(child: Icon(Icons.image_not_supported_outlined)),
+          );
+        }
+
+        return Image.memory(
+          data,
+          fit: BoxFit.cover,
+          gaplessPlayback: true,
+        );
+      },
     );
   }
 }

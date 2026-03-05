@@ -33,9 +33,9 @@ void main() {
 
     test('faz fallback de locale e theme inválidos para padrões seguros', () async {
       await database.into(database.appSettings).insert(
-            const AppSettingsCompanion.insert(
+            AppSettingsCompanion.insert(
               id: Value(1),
-              language: 'fr-FR',
+              language: Value('fr-FR'),
               themeMode: Value('sepia'),
             ),
           );
@@ -64,3 +64,4 @@ void main() {
     });
   });
 }
+

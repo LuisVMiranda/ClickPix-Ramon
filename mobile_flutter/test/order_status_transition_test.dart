@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:clickpix_ramon/domain/entities/order.dart';
 import 'package:clickpix_ramon/domain/value_objects/order_status_transition.dart';
 import 'package:flutter_test/flutter_test.dart';
 

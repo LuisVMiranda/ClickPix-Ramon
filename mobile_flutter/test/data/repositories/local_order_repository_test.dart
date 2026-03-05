@@ -1,6 +1,6 @@
 import 'package:clickpix_ramon/data/local/app_database.dart';
 import 'package:clickpix_ramon/data/repositories/local_order_repository.dart';
-import 'package:clickpix_ramon/domain/entities/order.dart';
+import 'package:clickpix_ramon/domain/entities/order.dart' as domain;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -19,7 +19,7 @@ void main() {
 
   test('createOrder persists order items for selected assets', () async {
     await database.into(database.clients).insert(
-          const ClientsCompanion.insert(
+          ClientsCompanion.insert(
             id: 'client-1',
             name: 'Cliente 1',
             whatsapp: '+5511999999999',
@@ -40,14 +40,14 @@ void main() {
     }
 
     await repository.createOrder(
-      const Order(
+      const domain.Order(
         id: 'order-1',
         clientId: 'client-1',
         itemIds: ['asset-1', 'asset-2'],
         totalAmountCents: 3000,
         externalReference: 'order-1',
-        status: OrderStatus.created,
-        paymentMethod: PaymentMethod.pix,
+        status: domain.OrderStatus.created,
+        paymentMethod: domain.PaymentMethod.pix,
       ),
     );
 

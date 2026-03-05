@@ -4,11 +4,11 @@ import 'package:clickpix_ramon/core/settings/app_settings_store.dart';
 import 'package:clickpix_ramon/data/local/app_database.dart';
 import 'package:clickpix_ramon/data/services/upload_worker.dart';
 import 'package:clickpix_ramon/presentation/recent_photos_page.dart';
-import 'package:drift/drift.dart';
+import 'package:drift/drift.dart' show LazyDatabase;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:clickpix_ramon/core/i18n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -437,3 +437,4 @@ class _SettingsCard extends StatelessWidget {
     );
   }
 }
+

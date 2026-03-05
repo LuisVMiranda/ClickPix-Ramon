@@ -8,10 +8,12 @@ class Clients extends Table {
   TextColumn get whatsapp => text()();
   TextColumn get email => text().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+
   @override
-  Set<Column<Object>> get primaryKey => <Column<Object>>{id};
+  Set<Column> get primaryKey => {id};
 }
 
+@TableIndex(name: 'photo_assets_captured_at_idx', columns: {#capturedAt})
 class PhotoAssets extends Table {
   TextColumn get id => text()();
   TextColumn get localPath => text()();
@@ -22,14 +24,10 @@ class PhotoAssets extends Table {
   TextColumn get storagePath => text().nullable()();
 
   @override
-  List<Index> get indexes => <Index>[
-    Index('photo_assets_captured_at_idx', [capturedAt]),
-  ];
-
-  @override
-  Set<Column<Object>> get primaryKey => <Column<Object>>{id};
+  Set<Column> get primaryKey => {id};
 }
 
+@TableIndex(name: 'orders_status_created_at_idx', columns: {#status, #createdAt})
 class Orders extends Table {
   TextColumn get id => text()();
   TextColumn get clientId => text()();
@@ -42,12 +40,7 @@ class Orders extends Table {
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 
   @override
-  List<Index> get indexes => <Index>[
-    Index('orders_status_created_at_idx', [status, createdAt]),
-  ];
-
-  @override
-  Set<Column<Object>> get primaryKey => <Column<Object>>{id};
+  Set<Column> get primaryKey => {id};
 }
 
 class OrderItems extends Table {
@@ -58,7 +51,7 @@ class OrderItems extends Table {
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 
   @override
-  Set<Column<Object>> get primaryKey => <Column<Object>>{id};
+  Set<Column> get primaryKey => {id};
 }
 
 class AppSettings extends Table {
@@ -66,18 +59,17 @@ class AppSettings extends Table {
   TextColumn get language => text().withDefault(const Constant('pt-BR'))();
   BoolColumn get wifiOnly => boolean().withDefault(const Constant(false))();
   IntColumn get accessCodeValidityDays => integer().withDefault(const Constant(7))();
-  TextColumn get watermarkConfigJson =>
-      text().withDefault(const Constant('{}'))();
-  BoolColumn get highContrastEnabled =>
-      boolean().withDefault(const Constant(false))();
-  BoolColumn get solarLargeFontEnabled =>
-      boolean().withDefault(const Constant(false))();
+  TextColumn get watermarkConfigJson => text().withDefault(const Constant('{}'))();
+  BoolColumn get highContrastEnabled => boolean().withDefault(const Constant(false))();
+  BoolColumn get solarLargeFontEnabled => boolean().withDefault(const Constant(false))();
   TextColumn get themeMode => text().withDefault(const Constant('system'))();
 
   @override
-  Set<Column<Object>> get primaryKey => <Column<Object>>{id};
+  Set<Column> get primaryKey => {id};
 }
 
+@TableIndex(name: 'upload_tasks_status_next_attempt_idx', columns: {#status, #nextAttemptAt})
+@TableIndex(name: 'upload_tasks_order_id_idx', columns: {#orderId})
 class UploadTasks extends Table {
   TextColumn get id => text()();
   TextColumn get orderId => text().references(Orders, #id)();
@@ -88,13 +80,7 @@ class UploadTasks extends Table {
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 
   @override
-  List<Index> get indexes => <Index>[
-    Index('upload_tasks_status_next_attempt_idx', [status, nextAttemptAt]),
-    Index('upload_tasks_order_id_idx', [orderId]),
-  ];
-
-  @override
-  Set<Column<Object>> get primaryKey => <Column<Object>>{id};
+  Set<Column> get primaryKey => {id};
 }
 
 @DriftDatabase(tables: [Clients, PhotoAssets, Orders, OrderItems, AppSettings, UploadTasks])
@@ -106,34 +92,34 @@ class AppDatabase extends _$AppDatabase {
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-    onCreate: (m) => m.createAll(),
-    onUpgrade: (m, from, to) async {
-      if (from < 2) {
-        await m.createTable(orderItems);
-        await m.createTable(appSettings);
+        onCreate: (m) => m.createAll(),
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            await m.createTable(orderItems);
+            await m.createTable(appSettings);
 
-        await m.customStatement(
-          'CREATE INDEX IF NOT EXISTS orders_status_created_at_idx ON orders (status, created_at)',
-        );
-        await m.customStatement(
-          'CREATE INDEX IF NOT EXISTS photo_assets_captured_at_idx ON photo_assets (captured_at)',
-        );
-      }
-      if (from < 3) {
-        await m.addColumn(appSettings, appSettings.solarLargeFontEnabled);
-      }
-      if (from < 4) {
-        await m.addColumn(appSettings, appSettings.themeMode);
-      }
-      if (from < 5) {
-        await m.createTable(uploadTasks);
-        await m.customStatement(
-          'CREATE INDEX IF NOT EXISTS upload_tasks_status_next_attempt_idx ON upload_tasks (status, next_attempt_at)',
-        );
-        await m.customStatement(
-          'CREATE INDEX IF NOT EXISTS upload_tasks_order_id_idx ON upload_tasks (order_id)',
-        );
-      }
-    },
-  );
+            await m.database.customStatement(
+              'CREATE INDEX IF NOT EXISTS orders_status_created_at_idx ON orders (status, created_at)',
+            );
+            await m.database.customStatement(
+              'CREATE INDEX IF NOT EXISTS photo_assets_captured_at_idx ON photo_assets (captured_at)',
+            );
+          }
+          if (from >= 2 && from < 3) {
+            await m.addColumn(appSettings, appSettings.solarLargeFontEnabled);
+          }
+          if (from >= 3 && from < 4) {
+            await m.addColumn(appSettings, appSettings.themeMode);
+          }
+          if (from < 5) {
+            await m.createTable(uploadTasks);
+            await m.database.customStatement(
+              'CREATE INDEX IF NOT EXISTS upload_tasks_status_next_attempt_idx ON upload_tasks (status, next_attempt_at)',
+            );
+            await m.database.customStatement(
+              'CREATE INDEX IF NOT EXISTS upload_tasks_order_id_idx ON upload_tasks (order_id)',
+            );
+          }
+        },
+      );
 }

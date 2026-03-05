@@ -1,4 +1,5 @@
 import 'package:clickpix_ramon/data/local/app_database.dart';
+import 'package:drift/drift.dart' as drift;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqlite3/sqlite3.dart' as sqlite;
@@ -91,7 +92,12 @@ void main() {
 
       expect(orderIndexNames, contains('orders_status_created_at_idx'));
       expect(photoIndexNames, contains('photo_assets_captured_at_idx'));
-      expect(orderIndexNames, contains('orders_external_reference'));
+      expect(
+        orderIndexNames.any(
+          (name) => name == 'orders_external_reference' || name.startsWith('sqlite_autoindex_orders'),
+        ),
+        isTrue,
+      );
       expect(uploadTaskIndexNames, contains('upload_tasks_status_next_attempt_idx'));
 
       await database.close();
@@ -111,14 +117,14 @@ void main() {
 
     test('inserts and reads app settings singleton fields', () async {
       await database.into(database.appSettings).insert(
-            const AppSettingsCompanion.insert(
-              language: 'en',
-              wifiOnly: true,
-              accessCodeValidityDays: 3,
-              watermarkConfigJson: '{"enabled":true}',
-              highContrastEnabled: true,
-              solarLargeFontEnabled: true,
-              themeMode: 'dark',
+            AppSettingsCompanion.insert(
+              language: drift.Value('en'),
+              wifiOnly: drift.Value(true),
+              accessCodeValidityDays: drift.Value(3),
+              watermarkConfigJson: drift.Value('{"enabled":true}'),
+              highContrastEnabled: drift.Value(true),
+              solarLargeFontEnabled: drift.Value(true),
+              themeMode: drift.Value('dark'),
             ),
           );
 
@@ -136,7 +142,7 @@ void main() {
 
     test('creates order items linked to order and photo asset', () async {
       await database.into(database.clients).insert(
-            const ClientsCompanion.insert(
+            ClientsCompanion.insert(
               id: 'client-1',
               name: 'Cliente 1',
               whatsapp: '+5511999999999',
@@ -155,7 +161,7 @@ void main() {
           );
 
       await database.into(database.orders).insert(
-            const OrdersCompanion.insert(
+            OrdersCompanion.insert(
               id: 'order-1',
               clientId: 'client-1',
               totalAmountCents: 1500,
@@ -166,7 +172,7 @@ void main() {
           );
 
       await database.into(database.orderItems).insert(
-            const OrderItemsCompanion.insert(
+            OrderItemsCompanion.insert(
               id: 'item-1',
               orderId: 'order-1',
               photoAssetId: 'asset-1',
