@@ -1,0 +1,6 @@
+{
+  "elements": {},
+  "imports": [
+    "package:clickpix_ramon/domain/entities/order.dart"
+  ]
+}

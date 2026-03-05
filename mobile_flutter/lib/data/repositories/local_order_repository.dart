@@ -64,7 +64,7 @@ class LocalOrderRepository implements OrderRepository {
 
   @override
   Future<List<domain.Order>> listRecentOrders({int limit = 20}) async {
-    final rows = await (_database.select(_database.orders)
+    final List<Order> rows = await (_database.select(_database.orders)
           ..orderBy([(tbl) => OrderingTerm.desc(tbl.createdAt)])
           ..limit(limit))
         .get();
@@ -84,14 +84,18 @@ class LocalOrderRepository implements OrderRepository {
   }
 
   Future<domain.Order> _toEntity(Order row) async {
-    final itemRows = await (_database.select(_database.orderItems)
+    final List<OrderItem> itemRows = await (_database.select(_database.orderItems)
           ..where((tbl) => tbl.orderId.equals(row.id)))
         .get();
+
+    final List<String> itemIds = itemRows
+        .map((item) => item.photoAssetId)
+        .toList(growable: false);
 
     return domain.Order(
       id: row.id,
       clientId: row.clientId,
-      itemIds: itemRows.map((item) => item.photoAssetId).toList(),
+      itemIds: itemIds,
       totalAmountCents: row.totalAmountCents,
       externalReference: row.externalReference,
       status: OrderStatusTransition.statusByContractState[row.status] ??

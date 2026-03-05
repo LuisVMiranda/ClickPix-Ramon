@@ -1,0 +1,13 @@
+{
+  "elements": {},
+  "imports": [
+    "package:clickpix_ramon/core/settings/app_settings_store.dart",
+    "package:clickpix_ramon/data/local/app_database.dart",
+    "package:clickpix_ramon/data/services/upload_queue_service.dart",
+    "package:connectivity_plus/connectivity_plus.dart",
+    "package:drift/native.dart",
+    "package:path/path.dart",
+    "package:path_provider/path_provider.dart",
+    "package:workmanager/workmanager.dart"
+  ]
+}

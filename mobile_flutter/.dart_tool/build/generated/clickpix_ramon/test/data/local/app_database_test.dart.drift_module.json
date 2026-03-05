@@ -1,0 +1,9 @@
+{
+  "elements": {},
+  "imports": [
+    "package:clickpix_ramon/data/local/app_database.dart",
+    "package:drift/native.dart",
+    "package:flutter_test/flutter_test.dart",
+    "package:sqlite3/sqlite3.dart"
+  ]
+}

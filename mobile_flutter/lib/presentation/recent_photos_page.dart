@@ -112,7 +112,7 @@ class _RecentPhotosPageState extends State<RecentPhotosPage> {
     final l10n = AppLocalizations.of(context)!;
     final colorScheme = Theme.of(context).colorScheme;
     final threshold = DateTime.now().subtract(Duration(minutes: _selectedFilter));
-    final filteredPhotos = _photos.where((photo) => photo.capturedAt.isAfter(threshold)).toList(growable: false);
+    final List<_GalleryPhoto> filteredPhotos = _photos.where((photo) => photo.capturedAt.isAfter(threshold)).toList(growable: false);
     final isLandscape = MediaQuery.sizeOf(context).width > MediaQuery.sizeOf(context).height;
     final crossAxisCount = isLandscape ? 4 : 3;
 
@@ -218,7 +218,7 @@ class _RecentPhotosPageState extends State<RecentPhotosPage> {
       return;
     }
 
-    final selectedAssets = _selectedAssetsById.values.toList(growable: false);
+    final List<AssetEntity> selectedAssets = _selectedAssetsById.values.toList(growable: false);
     if (selectedAssets.isEmpty) {
       return;
     }
@@ -226,7 +226,7 @@ class _RecentPhotosPageState extends State<RecentPhotosPage> {
     setState(() => _isSubmittingOrder = true);
     await _photoRepository.persistAssets(selectedAssets);
 
-    final itemIds = selectedAssets.map((asset) => 'asset_${asset.id}').toList(growable: false);
+    final List<String> itemIds = selectedAssets.map((asset) => 'asset_${asset.id}').toList(growable: false);
     final orderId = 'order_${DateTime.now().microsecondsSinceEpoch}';
     final order = domain.Order(
       id: orderId,
@@ -344,7 +344,7 @@ class _ClientSelectorSheetState extends State<_ClientSelectorSheet> {
   }
 
   Future<void> _loadClients() async {
-    final rows = await widget.clientRepository.listClients();
+    final List<ClientSummary> rows = await widget.clientRepository.listClients();
     if (!mounted) {
       return;
     }

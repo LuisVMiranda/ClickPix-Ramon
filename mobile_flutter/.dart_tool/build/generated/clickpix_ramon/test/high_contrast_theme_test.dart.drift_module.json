@@ -1,0 +1,11 @@
+{
+  "elements": {},
+  "imports": [
+    "package:clickpix_ramon/core/settings/app_settings_store.dart",
+    "package:clickpix_ramon/data/local/app_database.dart",
+    "package:clickpix_ramon/main.dart",
+    "package:drift/native.dart",
+    "package:flutter/material.dart",
+    "package:flutter_test/flutter_test.dart"
+  ]
+}

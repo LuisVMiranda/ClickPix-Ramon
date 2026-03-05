@@ -9,7 +9,7 @@ class Clients extends Table {
   TextColumn get email => text().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   @override
-  Set<Column<Object>> get primaryKey => {id};
+  Set<Column<Object>> get primaryKey => <Column<Object>>{id};
 }
 
 class PhotoAssets extends Table {
@@ -22,12 +22,12 @@ class PhotoAssets extends Table {
   TextColumn get storagePath => text().nullable()();
 
   @override
-  List<Index> get indexes => [
+  List<Index> get indexes => <Index>[
     Index('photo_assets_captured_at_idx', [capturedAt]),
   ];
 
   @override
-  Set<Column<Object>> get primaryKey => {id};
+  Set<Column<Object>> get primaryKey => <Column<Object>>{id};
 }
 
 class Orders extends Table {
@@ -42,12 +42,12 @@ class Orders extends Table {
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 
   @override
-  List<Index> get indexes => [
+  List<Index> get indexes => <Index>[
     Index('orders_status_created_at_idx', [status, createdAt]),
   ];
 
   @override
-  Set<Column<Object>> get primaryKey => {id};
+  Set<Column<Object>> get primaryKey => <Column<Object>>{id};
 }
 
 class OrderItems extends Table {
@@ -58,7 +58,7 @@ class OrderItems extends Table {
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 
   @override
-  Set<Column<Object>> get primaryKey => {id};
+  Set<Column<Object>> get primaryKey => <Column<Object>>{id};
 }
 
 class AppSettings extends Table {
@@ -75,7 +75,7 @@ class AppSettings extends Table {
   TextColumn get themeMode => text().withDefault(const Constant('system'))();
 
   @override
-  Set<Column<Object>> get primaryKey => {id};
+  Set<Column<Object>> get primaryKey => <Column<Object>>{id};
 }
 
 class UploadTasks extends Table {
@@ -88,13 +88,13 @@ class UploadTasks extends Table {
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 
   @override
-  List<Index> get indexes => [
+  List<Index> get indexes => <Index>[
     Index('upload_tasks_status_next_attempt_idx', [status, nextAttemptAt]),
     Index('upload_tasks_order_id_idx', [orderId]),
   ];
 
   @override
-  Set<Column<Object>> get primaryKey => {id};
+  Set<Column<Object>> get primaryKey => <Column<Object>>{id};
 }
 
 @DriftDatabase(tables: [Clients, PhotoAssets, Orders, OrderItems, AppSettings, UploadTasks])

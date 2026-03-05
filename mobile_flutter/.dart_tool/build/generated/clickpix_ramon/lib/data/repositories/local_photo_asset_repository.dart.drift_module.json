@@ -1,0 +1,8 @@
+{
+  "elements": {},
+  "imports": [
+    "package:clickpix_ramon/data/local/app_database.dart",
+    "package:drift/drift.dart",
+    "package:photo_manager/photo_manager.dart"
+  ]
+}

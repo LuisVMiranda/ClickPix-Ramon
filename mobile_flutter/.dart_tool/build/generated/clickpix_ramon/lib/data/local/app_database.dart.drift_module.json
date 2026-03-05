@@ -1,0 +1,1337 @@
+{
+  "elements": {
+    "AppDatabase": {
+      "id": {
+        "library_uri": "package:clickpix_ramon/data/local/app_database.dart",
+        "name": "AppDatabase"
+      },
+      "declaration": {
+        "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+        "offset": 3616,
+        "name": "AppDatabase"
+      },
+      "references": [
+        {
+          "library_uri": "package:clickpix_ramon/data/local/app_database.dart",
+          "name": "clients"
+        },
+        {
+          "library_uri": "package:clickpix_ramon/data/local/app_database.dart",
+          "name": "photo_assets"
+        },
+        {
+          "library_uri": "package:clickpix_ramon/data/local/app_database.dart",
+          "name": "orders"
+        },
+        {
+          "library_uri": "package:clickpix_ramon/data/local/app_database.dart",
+          "name": "order_items"
+        },
+        {
+          "library_uri": "package:clickpix_ramon/data/local/app_database.dart",
+          "name": "app_settings"
+        },
+        {
+          "library_uri": "package:clickpix_ramon/data/local/app_database.dart",
+          "name": "upload_tasks"
+        }
+      ],
+      "type": "database",
+      "tables": [
+        {
+          "library_uri": "package:clickpix_ramon/data/local/app_database.dart",
+          "name": "clients"
+        },
+        {
+          "library_uri": "package:clickpix_ramon/data/local/app_database.dart",
+          "name": "photo_assets"
+        },
+        {
+          "library_uri": "package:clickpix_ramon/data/local/app_database.dart",
+          "name": "orders"
+        },
+        {
+          "library_uri": "package:clickpix_ramon/data/local/app_database.dart",
+          "name": "order_items"
+        },
+        {
+          "library_uri": "package:clickpix_ramon/data/local/app_database.dart",
+          "name": "app_settings"
+        },
+        {
+          "library_uri": "package:clickpix_ramon/data/local/app_database.dart",
+          "name": "upload_tasks"
+        }
+      ],
+      "views": [],
+      "includes": [],
+      "queries": [],
+      "schema_version": 5,
+      "daos": [],
+      "has_constructor_arg": true
+    },
+    "clients": {
+      "id": {
+        "library_uri": "package:clickpix_ramon/data/local/app_database.dart",
+        "name": "clients"
+      },
+      "declaration": {
+        "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+        "offset": 75,
+        "name": "Clients"
+      },
+      "references": [],
+      "type": "table",
+      "columns": [
+        {
+          "sqlType": {
+            "builtin": "string"
+          },
+          "nullable": false,
+          "nameInSql": "id",
+          "nameInDart": "id",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 117,
+            "name": "id"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": null,
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [],
+          "customConstraints": null
+        },
+        {
+          "sqlType": {
+            "builtin": "string"
+          },
+          "nullable": false,
+          "nameInSql": "name",
+          "nameInDart": "name",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 151,
+            "name": "name"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": null,
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [],
+          "customConstraints": null
+        },
+        {
+          "sqlType": {
+            "builtin": "string"
+          },
+          "nullable": false,
+          "nameInSql": "whatsapp",
+          "nameInDart": "whatsapp",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 187,
+            "name": "whatsapp"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": null,
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [],
+          "customConstraints": null
+        },
+        {
+          "sqlType": {
+            "builtin": "string"
+          },
+          "nullable": true,
+          "nameInSql": "email",
+          "nameInDart": "email",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 227,
+            "name": "email"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": null,
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [],
+          "customConstraints": null
+        },
+        {
+          "sqlType": {
+            "builtin": "dateTime"
+          },
+          "nullable": false,
+          "nameInSql": "created_at",
+          "nameInDart": "createdAt",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 279,
+            "name": "createdAt"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": {
+            "elements": [
+              {
+                "lexeme": "currentDateAndTime",
+                "import_uri": "package:drift/src/runtime/query_builder/query_builder.dart"
+              }
+            ]
+          },
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [],
+          "customConstraints": null
+        }
+      ],
+      "existing_data_class": null,
+      "table_constraints": [
+        {
+          "type": "primary_key",
+          "columns": [
+            "id"
+          ]
+        }
+      ],
+      "custom_parent_class": null,
+      "interfaces_for_row_class": [],
+      "fixed_entity_info_name": null,
+      "base_dart_name": "Clients",
+      "row_class_name": "Client",
+      "companion_class_name": null,
+      "without_rowid": false,
+      "strict": false,
+      "write_default_constraints": true,
+      "custom_constraints": [],
+      "attached_indices": []
+    },
+    "photo_assets": {
+      "id": {
+        "library_uri": "package:clickpix_ramon/data/local/app_database.dart",
+        "name": "photo_assets"
+      },
+      "declaration": {
+        "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+        "offset": 410,
+        "name": "PhotoAssets"
+      },
+      "references": [],
+      "type": "table",
+      "columns": [
+        {
+          "sqlType": {
+            "builtin": "string"
+          },
+          "nullable": false,
+          "nameInSql": "id",
+          "nameInDart": "id",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 456,
+            "name": "id"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": null,
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [],
+          "customConstraints": null
+        },
+        {
+          "sqlType": {
+            "builtin": "string"
+          },
+          "nullable": false,
+          "nameInSql": "local_path",
+          "nameInDart": "localPath",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 490,
+            "name": "localPath"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": null,
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [],
+          "customConstraints": null
+        },
+        {
+          "sqlType": {
+            "builtin": "string"
+          },
+          "nullable": false,
+          "nameInSql": "thumbnail_key",
+          "nameInDart": "thumbnailKey",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 531,
+            "name": "thumbnailKey"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": null,
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [],
+          "customConstraints": null
+        },
+        {
+          "sqlType": {
+            "builtin": "dateTime"
+          },
+          "nullable": false,
+          "nameInSql": "captured_at",
+          "nameInDart": "capturedAt",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 579,
+            "name": "capturedAt"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": null,
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [],
+          "customConstraints": null
+        },
+        {
+          "sqlType": {
+            "builtin": "string"
+          },
+          "nullable": false,
+          "nameInSql": "checksum",
+          "nameInDart": "checksum",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 625,
+            "name": "checksum"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": null,
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [
+            {
+              "type": "unique"
+            }
+          ],
+          "customConstraints": null
+        },
+        {
+          "sqlType": {
+            "builtin": "string"
+          },
+          "nullable": false,
+          "nameInSql": "upload_status",
+          "nameInDart": "uploadStatus",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 674,
+            "name": "uploadStatus"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": null,
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [],
+          "customConstraints": null
+        },
+        {
+          "sqlType": {
+            "builtin": "string"
+          },
+          "nullable": true,
+          "nameInSql": "storage_path",
+          "nameInDart": "storagePath",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 718,
+            "name": "storagePath"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": null,
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [],
+          "customConstraints": null
+        }
+      ],
+      "existing_data_class": null,
+      "table_constraints": [
+        {
+          "type": "primary_key",
+          "columns": [
+            "id"
+          ]
+        }
+      ],
+      "custom_parent_class": null,
+      "interfaces_for_row_class": [],
+      "fixed_entity_info_name": null,
+      "base_dart_name": "PhotoAssets",
+      "row_class_name": "PhotoAsset",
+      "companion_class_name": null,
+      "without_rowid": false,
+      "strict": false,
+      "write_default_constraints": true,
+      "custom_constraints": [],
+      "attached_indices": []
+    },
+    "orders": {
+      "id": {
+        "library_uri": "package:clickpix_ramon/data/local/app_database.dart",
+        "name": "orders"
+      },
+      "declaration": {
+        "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+        "offset": 939,
+        "name": "Orders"
+      },
+      "references": [],
+      "type": "table",
+      "columns": [
+        {
+          "sqlType": {
+            "builtin": "string"
+          },
+          "nullable": false,
+          "nameInSql": "id",
+          "nameInDart": "id",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 980,
+            "name": "id"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": null,
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [],
+          "customConstraints": null
+        },
+        {
+          "sqlType": {
+            "builtin": "string"
+          },
+          "nullable": false,
+          "nameInSql": "client_id",
+          "nameInDart": "clientId",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 1014,
+            "name": "clientId"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": null,
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [],
+          "customConstraints": null
+        },
+        {
+          "sqlType": {
+            "builtin": "int"
+          },
+          "nullable": false,
+          "nameInSql": "total_amount_cents",
+          "nameInDart": "totalAmountCents",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 1053,
+            "name": "totalAmountCents"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": null,
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [],
+          "customConstraints": null
+        },
+        {
+          "sqlType": {
+            "builtin": "string"
+          },
+          "nullable": false,
+          "nameInSql": "currency",
+          "nameInDart": "currency",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 1104,
+            "name": "currency"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": {
+            "elements": [
+              "const ",
+              {
+                "lexeme": "Constant",
+                "import_uri": "package:drift/src/runtime/query_builder/query_builder.dart"
+              },
+              "('BRL')"
+            ]
+          },
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [],
+          "customConstraints": null
+        },
+        {
+          "sqlType": {
+            "builtin": "string"
+          },
+          "nullable": false,
+          "nameInSql": "status",
+          "nameInDart": "status",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 1179,
+            "name": "status"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": null,
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [],
+          "customConstraints": null
+        },
+        {
+          "sqlType": {
+            "builtin": "string"
+          },
+          "nullable": false,
+          "nameInSql": "payment_method",
+          "nameInDart": "paymentMethod",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 1217,
+            "name": "paymentMethod"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": null,
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [],
+          "customConstraints": null
+        },
+        {
+          "sqlType": {
+            "builtin": "string"
+          },
+          "nullable": false,
+          "nameInSql": "external_reference",
+          "nameInDart": "externalReference",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 1262,
+            "name": "externalReference"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": null,
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [
+            {
+              "type": "unique"
+            }
+          ],
+          "customConstraints": null
+        },
+        {
+          "sqlType": {
+            "builtin": "string"
+          },
+          "nullable": true,
+          "nameInSql": "provider_data_json",
+          "nameInDart": "providerDataJson",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 1320,
+            "name": "providerDataJson"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": null,
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [],
+          "customConstraints": null
+        },
+        {
+          "sqlType": {
+            "builtin": "dateTime"
+          },
+          "nullable": false,
+          "nameInSql": "created_at",
+          "nameInDart": "createdAt",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 1383,
+            "name": "createdAt"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": {
+            "elements": [
+              {
+                "lexeme": "currentDateAndTime",
+                "import_uri": "package:drift/src/runtime/query_builder/query_builder.dart"
+              }
+            ]
+          },
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [],
+          "customConstraints": null
+        }
+      ],
+      "existing_data_class": null,
+      "table_constraints": [
+        {
+          "type": "primary_key",
+          "columns": [
+            "id"
+          ]
+        }
+      ],
+      "custom_parent_class": null,
+      "interfaces_for_row_class": [],
+      "fixed_entity_info_name": null,
+      "base_dart_name": "Orders",
+      "row_class_name": "Order",
+      "companion_class_name": null,
+      "without_rowid": false,
+      "strict": false,
+      "write_default_constraints": true,
+      "custom_constraints": [],
+      "attached_indices": []
+    },
+    "order_items": {
+      "id": {
+        "library_uri": "package:clickpix_ramon/data/local/app_database.dart",
+        "name": "order_items"
+      },
+      "declaration": {
+        "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+        "offset": 1634,
+        "name": "OrderItems"
+      },
+      "references": [
+        {
+          "library_uri": "package:clickpix_ramon/data/local/app_database.dart",
+          "name": "orders"
+        },
+        {
+          "library_uri": "package:clickpix_ramon/data/local/app_database.dart",
+          "name": "photo_assets"
+        }
+      ],
+      "type": "table",
+      "columns": [
+        {
+          "sqlType": {
+            "builtin": "string"
+          },
+          "nullable": false,
+          "nameInSql": "id",
+          "nameInDart": "id",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 1679,
+            "name": "id"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": null,
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [],
+          "customConstraints": null
+        },
+        {
+          "sqlType": {
+            "builtin": "string"
+          },
+          "nullable": false,
+          "nameInSql": "order_id",
+          "nameInDart": "orderId",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 1713,
+            "name": "orderId"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": null,
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [
+            {
+              "type": "foreign_key",
+              "column": {
+                "table": {
+                  "library_uri": "package:clickpix_ramon/data/local/app_database.dart",
+                  "name": "orders"
+                },
+                "name": "id"
+              },
+              "onUpdate": null,
+              "onDelete": null,
+              "initiallyDeferred": false
+            }
+          ],
+          "customConstraints": null
+        },
+        {
+          "sqlType": {
+            "builtin": "string"
+          },
+          "nullable": false,
+          "nameInSql": "photo_asset_id",
+          "nameInDart": "photoAssetId",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 1776,
+            "name": "photoAssetId"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": null,
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [
+            {
+              "type": "foreign_key",
+              "column": {
+                "table": {
+                  "library_uri": "package:clickpix_ramon/data/local/app_database.dart",
+                  "name": "photo_assets"
+                },
+                "name": "id"
+              },
+              "onUpdate": null,
+              "onDelete": null,
+              "initiallyDeferred": false
+            }
+          ],
+          "customConstraints": null
+        },
+        {
+          "sqlType": {
+            "builtin": "int"
+          },
+          "nullable": false,
+          "nameInSql": "unit_price_cents",
+          "nameInDart": "unitPriceCents",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 1848,
+            "name": "unitPriceCents"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": null,
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [],
+          "customConstraints": null
+        },
+        {
+          "sqlType": {
+            "builtin": "dateTime"
+          },
+          "nullable": false,
+          "nameInSql": "created_at",
+          "nameInDart": "createdAt",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 1901,
+            "name": "createdAt"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": {
+            "elements": [
+              {
+                "lexeme": "currentDateAndTime",
+                "import_uri": "package:drift/src/runtime/query_builder/query_builder.dart"
+              }
+            ]
+          },
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [],
+          "customConstraints": null
+        }
+      ],
+      "existing_data_class": null,
+      "table_constraints": [
+        {
+          "type": "primary_key",
+          "columns": [
+            "id"
+          ]
+        }
+      ],
+      "custom_parent_class": null,
+      "interfaces_for_row_class": [],
+      "fixed_entity_info_name": null,
+      "base_dart_name": "OrderItems",
+      "row_class_name": "OrderItem",
+      "companion_class_name": null,
+      "without_rowid": false,
+      "strict": false,
+      "write_default_constraints": true,
+      "custom_constraints": [],
+      "attached_indices": []
+    },
+    "app_settings": {
+      "id": {
+        "library_uri": "package:clickpix_ramon/data/local/app_database.dart",
+        "name": "app_settings"
+      },
+      "declaration": {
+        "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+        "offset": 2034,
+        "name": "AppSettings"
+      },
+      "references": [],
+      "type": "table",
+      "columns": [
+        {
+          "sqlType": {
+            "builtin": "int"
+          },
+          "nullable": false,
+          "nameInSql": "id",
+          "nameInDart": "id",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 2079,
+            "name": "id"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": {
+            "elements": [
+              "const ",
+              {
+                "lexeme": "Constant",
+                "import_uri": "package:drift/src/runtime/query_builder/query_builder.dart"
+              },
+              "(1)"
+            ]
+          },
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [],
+          "customConstraints": null
+        },
+        {
+          "sqlType": {
+            "builtin": "string"
+          },
+          "nullable": false,
+          "nameInSql": "language",
+          "nameInDart": "language",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 2147,
+            "name": "language"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": {
+            "elements": [
+              "const ",
+              {
+                "lexeme": "Constant",
+                "import_uri": "package:drift/src/runtime/query_builder/query_builder.dart"
+              },
+              "('pt-BR')"
+            ]
+          },
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [],
+          "customConstraints": null
+        },
+        {
+          "sqlType": {
+            "builtin": "bool"
+          },
+          "nullable": false,
+          "nameInSql": "wifi_only",
+          "nameInDart": "wifiOnly",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 2224,
+            "name": "wifiOnly"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": {
+            "elements": [
+              "const ",
+              {
+                "lexeme": "Constant",
+                "import_uri": "package:drift/src/runtime/query_builder/query_builder.dart"
+              },
+              "(false)"
+            ]
+          },
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [],
+          "customConstraints": null
+        },
+        {
+          "sqlType": {
+            "builtin": "int"
+          },
+          "nullable": false,
+          "nameInSql": "access_code_validity_days",
+          "nameInDart": "accessCodeValidityDays",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 2301,
+            "name": "accessCodeValidityDays"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": {
+            "elements": [
+              "const ",
+              {
+                "lexeme": "Constant",
+                "import_uri": "package:drift/src/runtime/query_builder/query_builder.dart"
+              },
+              "(7)"
+            ]
+          },
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [],
+          "customConstraints": null
+        },
+        {
+          "sqlType": {
+            "builtin": "string"
+          },
+          "nullable": false,
+          "nameInSql": "watermark_config_json",
+          "nameInDart": "watermarkConfigJson",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 2389,
+            "name": "watermarkConfigJson"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": {
+            "elements": [
+              "const ",
+              {
+                "lexeme": "Constant",
+                "import_uri": "package:drift/src/runtime/query_builder/query_builder.dart"
+              },
+              "('{}')"
+            ]
+          },
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [],
+          "customConstraints": null
+        },
+        {
+          "sqlType": {
+            "builtin": "bool"
+          },
+          "nullable": false,
+          "nameInSql": "high_contrast_enabled",
+          "nameInDart": "highContrastEnabled",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 2481,
+            "name": "highContrastEnabled"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": {
+            "elements": [
+              "const ",
+              {
+                "lexeme": "Constant",
+                "import_uri": "package:drift/src/runtime/query_builder/query_builder.dart"
+              },
+              "(false)"
+            ]
+          },
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [],
+          "customConstraints": null
+        },
+        {
+          "sqlType": {
+            "builtin": "bool"
+          },
+          "nullable": false,
+          "nameInSql": "solar_large_font_enabled",
+          "nameInDart": "solarLargeFontEnabled",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 2577,
+            "name": "solarLargeFontEnabled"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": {
+            "elements": [
+              "const ",
+              {
+                "lexeme": "Constant",
+                "import_uri": "package:drift/src/runtime/query_builder/query_builder.dart"
+              },
+              "(false)"
+            ]
+          },
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [],
+          "customConstraints": null
+        },
+        {
+          "sqlType": {
+            "builtin": "string"
+          },
+          "nullable": false,
+          "nameInSql": "theme_mode",
+          "nameInDart": "themeMode",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 2675,
+            "name": "themeMode"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": {
+            "elements": [
+              "const ",
+              {
+                "lexeme": "Constant",
+                "import_uri": "package:drift/src/runtime/query_builder/query_builder.dart"
+              },
+              "('system')"
+            ]
+          },
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [],
+          "customConstraints": null
+        }
+      ],
+      "existing_data_class": null,
+      "table_constraints": [
+        {
+          "type": "primary_key",
+          "columns": [
+            "id"
+          ]
+        }
+      ],
+      "custom_parent_class": null,
+      "interfaces_for_row_class": [],
+      "fixed_entity_info_name": null,
+      "base_dart_name": "AppSettings",
+      "row_class_name": "AppSetting",
+      "companion_class_name": null,
+      "without_rowid": false,
+      "strict": false,
+      "write_default_constraints": true,
+      "custom_constraints": [],
+      "attached_indices": []
+    },
+    "upload_tasks": {
+      "id": {
+        "library_uri": "package:clickpix_ramon/data/local/app_database.dart",
+        "name": "upload_tasks"
+      },
+      "declaration": {
+        "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+        "offset": 2810,
+        "name": "UploadTasks"
+      },
+      "references": [
+        {
+          "library_uri": "package:clickpix_ramon/data/local/app_database.dart",
+          "name": "orders"
+        }
+      ],
+      "type": "table",
+      "columns": [
+        {
+          "sqlType": {
+            "builtin": "string"
+          },
+          "nullable": false,
+          "nameInSql": "id",
+          "nameInDart": "id",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 2856,
+            "name": "id"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": null,
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [],
+          "customConstraints": null
+        },
+        {
+          "sqlType": {
+            "builtin": "string"
+          },
+          "nullable": false,
+          "nameInSql": "order_id",
+          "nameInDart": "orderId",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 2890,
+            "name": "orderId"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": null,
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [
+            {
+              "type": "foreign_key",
+              "column": {
+                "table": {
+                  "library_uri": "package:clickpix_ramon/data/local/app_database.dart",
+                  "name": "orders"
+                },
+                "name": "id"
+              },
+              "onUpdate": null,
+              "onDelete": null,
+              "initiallyDeferred": false
+            }
+          ],
+          "customConstraints": null
+        },
+        {
+          "sqlType": {
+            "builtin": "string"
+          },
+          "nullable": false,
+          "nameInSql": "status",
+          "nameInDart": "status",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 2953,
+            "name": "status"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": null,
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [],
+          "customConstraints": null
+        },
+        {
+          "sqlType": {
+            "builtin": "int"
+          },
+          "nullable": false,
+          "nameInSql": "retry_count",
+          "nameInDart": "retryCount",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 2990,
+            "name": "retryCount"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": {
+            "elements": [
+              "const ",
+              {
+                "lexeme": "Constant",
+                "import_uri": "package:drift/src/runtime/query_builder/query_builder.dart"
+              },
+              "(0)"
+            ]
+          },
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [],
+          "customConstraints": null
+        },
+        {
+          "sqlType": {
+            "builtin": "dateTime"
+          },
+          "nullable": false,
+          "nameInSql": "next_attempt_at",
+          "nameInDart": "nextAttemptAt",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 3070,
+            "name": "nextAttemptAt"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": {
+            "elements": [
+              {
+                "lexeme": "currentDateAndTime",
+                "import_uri": "package:drift/src/runtime/query_builder/query_builder.dart"
+              }
+            ]
+          },
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [],
+          "customConstraints": null
+        },
+        {
+          "sqlType": {
+            "builtin": "string"
+          },
+          "nullable": true,
+          "nameInSql": "last_error",
+          "nameInDart": "lastError",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 3151,
+            "name": "lastError"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": null,
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [],
+          "customConstraints": null
+        },
+        {
+          "sqlType": {
+            "builtin": "dateTime"
+          },
+          "nullable": false,
+          "nameInSql": "created_at",
+          "nameInDart": "createdAt",
+          "declaration": {
+            "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
+            "offset": 3207,
+            "name": "createdAt"
+          },
+          "typeConverter": null,
+          "clientDefaultCode": null,
+          "defaultArgument": {
+            "elements": [
+              {
+                "lexeme": "currentDateAndTime",
+                "import_uri": "package:drift/src/runtime/query_builder/query_builder.dart"
+              }
+            ]
+          },
+          "overriddenJsonName": null,
+          "referenceName": null,
+          "documentationComment": null,
+          "constraints": [],
+          "customConstraints": null
+        }
+      ],
+      "existing_data_class": null,
+      "table_constraints": [
+        {
+          "type": "primary_key",
+          "columns": [
+            "id"
+          ]
+        }
+      ],
+      "custom_parent_class": null,
+      "interfaces_for_row_class": [],
+      "fixed_entity_info_name": null,
+      "base_dart_name": "UploadTasks",
+      "row_class_name": "UploadTask",
+      "companion_class_name": null,
+      "without_rowid": false,
+      "strict": false,
+      "write_default_constraints": true,
+      "custom_constraints": [],
+      "attached_indices": []
+    }
+  },
+  "imports": [
+    "package:drift/drift.dart"
+  ]
+}

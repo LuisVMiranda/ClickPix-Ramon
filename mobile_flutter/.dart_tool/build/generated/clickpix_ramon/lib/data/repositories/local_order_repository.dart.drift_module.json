@@ -1,0 +1,11 @@
+{
+  "elements": {},
+  "imports": [
+    "package:clickpix_ramon/data/local/app_database.dart",
+    "package:clickpix_ramon/data/services/upload_queue_service.dart",
+    "package:clickpix_ramon/domain/entities/order.dart",
+    "package:clickpix_ramon/domain/repositories/order_repository.dart",
+    "package:clickpix_ramon/domain/value_objects/order_status_transition.dart",
+    "package:drift/drift.dart"
+  ]
+}

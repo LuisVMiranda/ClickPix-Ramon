@@ -1,0 +1,8 @@
+{
+  "elements": {},
+  "imports": [
+    "package:clickpix_ramon/domain/entities/photo_package.dart",
+    "package:clickpix_ramon/domain/use_cases/build_order_pricing.dart",
+    "package:flutter_test/flutter_test.dart"
+  ]
+}
