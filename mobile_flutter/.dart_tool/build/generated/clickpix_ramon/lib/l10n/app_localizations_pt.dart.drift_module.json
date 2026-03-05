@@ -1,7 +1,0 @@
-{
-  "elements": {},
-  "imports": [
-    "package:intl/intl.dart",
-    "package:clickpix_ramon/l10n/app_localizations.dart"
-  ]
-}

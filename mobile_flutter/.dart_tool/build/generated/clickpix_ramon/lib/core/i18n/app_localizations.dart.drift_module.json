@@ -1,0 +1,12 @@
+{
+  "elements": {},
+  "imports": [
+    "package:flutter/foundation.dart",
+    "package:flutter/widgets.dart",
+    "package:flutter_localizations/flutter_localizations.dart",
+    "package:intl/intl.dart",
+    "package:clickpix_ramon/core/i18n/app_localizations_en.dart",
+    "package:clickpix_ramon/core/i18n/app_localizations_es.dart",
+    "package:clickpix_ramon/core/i18n/app_localizations_pt.dart"
+  ]
+}

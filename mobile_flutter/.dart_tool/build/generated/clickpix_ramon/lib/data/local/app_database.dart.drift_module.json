@@ -7,7 +7,7 @@
       },
       "declaration": {
         "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-        "offset": 3616,
+        "offset": 3733,
         "name": "AppDatabase"
       },
       "references": [
@@ -224,7 +224,7 @@
       },
       "declaration": {
         "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-        "offset": 410,
+        "offset": 426,
         "name": "PhotoAssets"
       },
       "references": [],
@@ -239,7 +239,7 @@
           "nameInDart": "id",
           "declaration": {
             "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-            "offset": 456,
+            "offset": 472,
             "name": "id"
           },
           "typeConverter": null,
@@ -260,7 +260,7 @@
           "nameInDart": "localPath",
           "declaration": {
             "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-            "offset": 490,
+            "offset": 506,
             "name": "localPath"
           },
           "typeConverter": null,
@@ -281,7 +281,7 @@
           "nameInDart": "thumbnailKey",
           "declaration": {
             "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-            "offset": 531,
+            "offset": 547,
             "name": "thumbnailKey"
           },
           "typeConverter": null,
@@ -302,7 +302,7 @@
           "nameInDart": "capturedAt",
           "declaration": {
             "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-            "offset": 579,
+            "offset": 595,
             "name": "capturedAt"
           },
           "typeConverter": null,
@@ -323,7 +323,7 @@
           "nameInDart": "checksum",
           "declaration": {
             "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-            "offset": 625,
+            "offset": 641,
             "name": "checksum"
           },
           "typeConverter": null,
@@ -348,7 +348,7 @@
           "nameInDart": "uploadStatus",
           "declaration": {
             "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-            "offset": 674,
+            "offset": 690,
             "name": "uploadStatus"
           },
           "typeConverter": null,
@@ -369,7 +369,7 @@
           "nameInDart": "storagePath",
           "declaration": {
             "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-            "offset": 718,
+            "offset": 734,
             "name": "storagePath"
           },
           "typeConverter": null,
@@ -410,7 +410,7 @@
       },
       "declaration": {
         "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-        "offset": 939,
+        "offset": 978,
         "name": "Orders"
       },
       "references": [],
@@ -425,7 +425,7 @@
           "nameInDart": "id",
           "declaration": {
             "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-            "offset": 980,
+            "offset": 1019,
             "name": "id"
           },
           "typeConverter": null,
@@ -446,7 +446,7 @@
           "nameInDart": "clientId",
           "declaration": {
             "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-            "offset": 1014,
+            "offset": 1053,
             "name": "clientId"
           },
           "typeConverter": null,
@@ -467,7 +467,7 @@
           "nameInDart": "totalAmountCents",
           "declaration": {
             "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-            "offset": 1053,
+            "offset": 1092,
             "name": "totalAmountCents"
           },
           "typeConverter": null,
@@ -488,7 +488,7 @@
           "nameInDart": "currency",
           "declaration": {
             "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-            "offset": 1104,
+            "offset": 1143,
             "name": "currency"
           },
           "typeConverter": null,
@@ -518,7 +518,7 @@
           "nameInDart": "status",
           "declaration": {
             "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-            "offset": 1179,
+            "offset": 1218,
             "name": "status"
           },
           "typeConverter": null,
@@ -539,7 +539,7 @@
           "nameInDart": "paymentMethod",
           "declaration": {
             "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-            "offset": 1217,
+            "offset": 1256,
             "name": "paymentMethod"
           },
           "typeConverter": null,
@@ -560,7 +560,7 @@
           "nameInDart": "externalReference",
           "declaration": {
             "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-            "offset": 1262,
+            "offset": 1301,
             "name": "externalReference"
           },
           "typeConverter": null,
@@ -585,7 +585,7 @@
           "nameInDart": "providerDataJson",
           "declaration": {
             "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-            "offset": 1320,
+            "offset": 1359,
             "name": "providerDataJson"
           },
           "typeConverter": null,
@@ -606,7 +606,7 @@
           "nameInDart": "createdAt",
           "declaration": {
             "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-            "offset": 1383,
+            "offset": 1422,
             "name": "createdAt"
           },
           "typeConverter": null,
@@ -654,7 +654,7 @@
       },
       "declaration": {
         "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-        "offset": 1634,
+        "offset": 1696,
         "name": "OrderItems"
       },
       "references": [
@@ -678,7 +678,7 @@
           "nameInDart": "id",
           "declaration": {
             "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-            "offset": 1679,
+            "offset": 1741,
             "name": "id"
           },
           "typeConverter": null,
@@ -699,7 +699,7 @@
           "nameInDart": "orderId",
           "declaration": {
             "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-            "offset": 1713,
+            "offset": 1775,
             "name": "orderId"
           },
           "typeConverter": null,
@@ -734,7 +734,7 @@
           "nameInDart": "photoAssetId",
           "declaration": {
             "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-            "offset": 1776,
+            "offset": 1838,
             "name": "photoAssetId"
           },
           "typeConverter": null,
@@ -769,7 +769,7 @@
           "nameInDart": "unitPriceCents",
           "declaration": {
             "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-            "offset": 1848,
+            "offset": 1910,
             "name": "unitPriceCents"
           },
           "typeConverter": null,
@@ -790,7 +790,7 @@
           "nameInDart": "createdAt",
           "declaration": {
             "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-            "offset": 1901,
+            "offset": 1963,
             "name": "createdAt"
           },
           "typeConverter": null,
@@ -838,7 +838,7 @@
       },
       "declaration": {
         "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-        "offset": 2034,
+        "offset": 2112,
         "name": "AppSettings"
       },
       "references": [],
@@ -853,7 +853,7 @@
           "nameInDart": "id",
           "declaration": {
             "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-            "offset": 2079,
+            "offset": 2157,
             "name": "id"
           },
           "typeConverter": null,
@@ -883,7 +883,7 @@
           "nameInDart": "language",
           "declaration": {
             "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-            "offset": 2147,
+            "offset": 2225,
             "name": "language"
           },
           "typeConverter": null,
@@ -913,7 +913,7 @@
           "nameInDart": "wifiOnly",
           "declaration": {
             "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-            "offset": 2224,
+            "offset": 2302,
             "name": "wifiOnly"
           },
           "typeConverter": null,
@@ -943,7 +943,7 @@
           "nameInDart": "accessCodeValidityDays",
           "declaration": {
             "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-            "offset": 2301,
+            "offset": 2379,
             "name": "accessCodeValidityDays"
           },
           "typeConverter": null,
@@ -973,7 +973,7 @@
           "nameInDart": "watermarkConfigJson",
           "declaration": {
             "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-            "offset": 2389,
+            "offset": 2467,
             "name": "watermarkConfigJson"
           },
           "typeConverter": null,
@@ -1003,7 +1003,7 @@
           "nameInDart": "highContrastEnabled",
           "declaration": {
             "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-            "offset": 2481,
+            "offset": 2559,
             "name": "highContrastEnabled"
           },
           "typeConverter": null,
@@ -1033,7 +1033,7 @@
           "nameInDart": "solarLargeFontEnabled",
           "declaration": {
             "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-            "offset": 2577,
+            "offset": 2655,
             "name": "solarLargeFontEnabled"
           },
           "typeConverter": null,
@@ -1063,7 +1063,7 @@
           "nameInDart": "themeMode",
           "declaration": {
             "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-            "offset": 2675,
+            "offset": 2753,
             "name": "themeMode"
           },
           "typeConverter": null,
@@ -1113,7 +1113,7 @@
       },
       "declaration": {
         "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-        "offset": 2810,
+        "offset": 2904,
         "name": "UploadTasks"
       },
       "references": [
@@ -1133,7 +1133,7 @@
           "nameInDart": "id",
           "declaration": {
             "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-            "offset": 2856,
+            "offset": 2950,
             "name": "id"
           },
           "typeConverter": null,
@@ -1154,7 +1154,7 @@
           "nameInDart": "orderId",
           "declaration": {
             "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-            "offset": 2890,
+            "offset": 2984,
             "name": "orderId"
           },
           "typeConverter": null,
@@ -1189,7 +1189,7 @@
           "nameInDart": "status",
           "declaration": {
             "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-            "offset": 2953,
+            "offset": 3047,
             "name": "status"
           },
           "typeConverter": null,
@@ -1210,7 +1210,7 @@
           "nameInDart": "retryCount",
           "declaration": {
             "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-            "offset": 2990,
+            "offset": 3084,
             "name": "retryCount"
           },
           "typeConverter": null,
@@ -1240,7 +1240,7 @@
           "nameInDart": "nextAttemptAt",
           "declaration": {
             "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-            "offset": 3070,
+            "offset": 3164,
             "name": "nextAttemptAt"
           },
           "typeConverter": null,
@@ -1268,7 +1268,7 @@
           "nameInDart": "lastError",
           "declaration": {
             "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-            "offset": 3151,
+            "offset": 3245,
             "name": "lastError"
           },
           "typeConverter": null,
@@ -1289,7 +1289,7 @@
           "nameInDart": "createdAt",
           "declaration": {
             "source_uri": "package:clickpix_ramon/data/local/app_database.dart",
-            "offset": 3207,
+            "offset": 3301,
             "name": "createdAt"
           },
           "typeConverter": null,
