@@ -1597,6 +1597,71 @@ class $AppSettingsTable extends AppSettings
       type: DriftSqlType.string,
       requiredDuringInsert: false,
       defaultValue: const Constant('system'));
+  static const VerificationMeta _adminUsernameMeta =
+      const VerificationMeta('adminUsername');
+  @override
+  late final GeneratedColumn<String> adminUsername = GeneratedColumn<String>(
+      'admin_username', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('admin'));
+  static const VerificationMeta _adminPasswordHashMeta =
+      const VerificationMeta('adminPasswordHash');
+  @override
+  late final GeneratedColumn<String> adminPasswordHash = GeneratedColumn<
+          String>('admin_password_hash', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(
+          '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9'));
+  static const VerificationMeta _photographerNameMeta =
+      const VerificationMeta('photographerName');
+  @override
+  late final GeneratedColumn<String> photographerName = GeneratedColumn<String>(
+      'photographer_name', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('Fotografo'));
+  static const VerificationMeta _photographerWhatsappMeta =
+      const VerificationMeta('photographerWhatsapp');
+  @override
+  late final GeneratedColumn<String> photographerWhatsapp =
+      GeneratedColumn<String>('photographer_whatsapp', aliasedName, false,
+          type: DriftSqlType.string,
+          requiredDuringInsert: false,
+          defaultValue: const Constant(''));
+  static const VerificationMeta _photographerEmailMeta =
+      const VerificationMeta('photographerEmail');
+  @override
+  late final GeneratedColumn<String> photographerEmail =
+      GeneratedColumn<String>('photographer_email', aliasedName, false,
+          type: DriftSqlType.string,
+          requiredDuringInsert: false,
+          defaultValue: const Constant(''));
+  static const VerificationMeta _photographerPixKeyMeta =
+      const VerificationMeta('photographerPixKey');
+  @override
+  late final GeneratedColumn<String> photographerPixKey =
+      GeneratedColumn<String>('photographer_pix_key', aliasedName, false,
+          type: DriftSqlType.string,
+          requiredDuringInsert: false,
+          defaultValue: const Constant(''));
+  static const VerificationMeta _deliveryHistoryJsonMeta =
+      const VerificationMeta('deliveryHistoryJson');
+  @override
+  late final GeneratedColumn<String> deliveryHistoryJson =
+      GeneratedColumn<String>('delivery_history_json', aliasedName, false,
+          type: DriftSqlType.string,
+          requiredDuringInsert: false,
+          defaultValue: const Constant('[]'));
+  static const VerificationMeta _preferredInputFolderMeta =
+      const VerificationMeta('preferredInputFolder');
+  @override
+  late final GeneratedColumn<String> preferredInputFolder =
+      GeneratedColumn<String>('preferred_input_folder', aliasedName, false,
+          type: DriftSqlType.string,
+          requiredDuringInsert: false,
+          defaultValue: const Constant(''));
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -1606,7 +1671,15 @@ class $AppSettingsTable extends AppSettings
         watermarkConfigJson,
         highContrastEnabled,
         solarLargeFontEnabled,
-        themeMode
+        themeMode,
+        adminUsername,
+        adminPasswordHash,
+        photographerName,
+        photographerWhatsapp,
+        photographerEmail,
+        photographerPixKey,
+        deliveryHistoryJson,
+        preferredInputFolder
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1657,6 +1730,54 @@ class $AppSettingsTable extends AppSettings
       context.handle(_themeModeMeta,
           themeMode.isAcceptableOrUnknown(data['theme_mode']!, _themeModeMeta));
     }
+    if (data.containsKey('admin_username')) {
+      context.handle(
+          _adminUsernameMeta,
+          adminUsername.isAcceptableOrUnknown(
+              data['admin_username']!, _adminUsernameMeta));
+    }
+    if (data.containsKey('admin_password_hash')) {
+      context.handle(
+          _adminPasswordHashMeta,
+          adminPasswordHash.isAcceptableOrUnknown(
+              data['admin_password_hash']!, _adminPasswordHashMeta));
+    }
+    if (data.containsKey('photographer_name')) {
+      context.handle(
+          _photographerNameMeta,
+          photographerName.isAcceptableOrUnknown(
+              data['photographer_name']!, _photographerNameMeta));
+    }
+    if (data.containsKey('photographer_whatsapp')) {
+      context.handle(
+          _photographerWhatsappMeta,
+          photographerWhatsapp.isAcceptableOrUnknown(
+              data['photographer_whatsapp']!, _photographerWhatsappMeta));
+    }
+    if (data.containsKey('photographer_email')) {
+      context.handle(
+          _photographerEmailMeta,
+          photographerEmail.isAcceptableOrUnknown(
+              data['photographer_email']!, _photographerEmailMeta));
+    }
+    if (data.containsKey('photographer_pix_key')) {
+      context.handle(
+          _photographerPixKeyMeta,
+          photographerPixKey.isAcceptableOrUnknown(
+              data['photographer_pix_key']!, _photographerPixKeyMeta));
+    }
+    if (data.containsKey('delivery_history_json')) {
+      context.handle(
+          _deliveryHistoryJsonMeta,
+          deliveryHistoryJson.isAcceptableOrUnknown(
+              data['delivery_history_json']!, _deliveryHistoryJsonMeta));
+    }
+    if (data.containsKey('preferred_input_folder')) {
+      context.handle(
+          _preferredInputFolderMeta,
+          preferredInputFolder.isAcceptableOrUnknown(
+              data['preferred_input_folder']!, _preferredInputFolderMeta));
+    }
     return context;
   }
 
@@ -1685,6 +1806,25 @@ class $AppSettingsTable extends AppSettings
           data['${effectivePrefix}solar_large_font_enabled'])!,
       themeMode: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}theme_mode'])!,
+      adminUsername: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}admin_username'])!,
+      adminPasswordHash: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}admin_password_hash'])!,
+      photographerName: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}photographer_name'])!,
+      photographerWhatsapp: attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}photographer_whatsapp'])!,
+      photographerEmail: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}photographer_email'])!,
+      photographerPixKey: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}photographer_pix_key'])!,
+      deliveryHistoryJson: attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}delivery_history_json'])!,
+      preferredInputFolder: attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}preferred_input_folder'])!,
     );
   }
 
@@ -1703,6 +1843,14 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
   final bool highContrastEnabled;
   final bool solarLargeFontEnabled;
   final String themeMode;
+  final String adminUsername;
+  final String adminPasswordHash;
+  final String photographerName;
+  final String photographerWhatsapp;
+  final String photographerEmail;
+  final String photographerPixKey;
+  final String deliveryHistoryJson;
+  final String preferredInputFolder;
   const AppSetting(
       {required this.id,
       required this.language,
@@ -1711,7 +1859,15 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       required this.watermarkConfigJson,
       required this.highContrastEnabled,
       required this.solarLargeFontEnabled,
-      required this.themeMode});
+      required this.themeMode,
+      required this.adminUsername,
+      required this.adminPasswordHash,
+      required this.photographerName,
+      required this.photographerWhatsapp,
+      required this.photographerEmail,
+      required this.photographerPixKey,
+      required this.deliveryHistoryJson,
+      required this.preferredInputFolder});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -1723,6 +1879,14 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     map['high_contrast_enabled'] = Variable<bool>(highContrastEnabled);
     map['solar_large_font_enabled'] = Variable<bool>(solarLargeFontEnabled);
     map['theme_mode'] = Variable<String>(themeMode);
+    map['admin_username'] = Variable<String>(adminUsername);
+    map['admin_password_hash'] = Variable<String>(adminPasswordHash);
+    map['photographer_name'] = Variable<String>(photographerName);
+    map['photographer_whatsapp'] = Variable<String>(photographerWhatsapp);
+    map['photographer_email'] = Variable<String>(photographerEmail);
+    map['photographer_pix_key'] = Variable<String>(photographerPixKey);
+    map['delivery_history_json'] = Variable<String>(deliveryHistoryJson);
+    map['preferred_input_folder'] = Variable<String>(preferredInputFolder);
     return map;
   }
 
@@ -1736,6 +1900,14 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       highContrastEnabled: Value(highContrastEnabled),
       solarLargeFontEnabled: Value(solarLargeFontEnabled),
       themeMode: Value(themeMode),
+      adminUsername: Value(adminUsername),
+      adminPasswordHash: Value(adminPasswordHash),
+      photographerName: Value(photographerName),
+      photographerWhatsapp: Value(photographerWhatsapp),
+      photographerEmail: Value(photographerEmail),
+      photographerPixKey: Value(photographerPixKey),
+      deliveryHistoryJson: Value(deliveryHistoryJson),
+      preferredInputFolder: Value(preferredInputFolder),
     );
   }
 
@@ -1755,6 +1927,18 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       solarLargeFontEnabled:
           serializer.fromJson<bool>(json['solarLargeFontEnabled']),
       themeMode: serializer.fromJson<String>(json['themeMode']),
+      adminUsername: serializer.fromJson<String>(json['adminUsername']),
+      adminPasswordHash: serializer.fromJson<String>(json['adminPasswordHash']),
+      photographerName: serializer.fromJson<String>(json['photographerName']),
+      photographerWhatsapp:
+          serializer.fromJson<String>(json['photographerWhatsapp']),
+      photographerEmail: serializer.fromJson<String>(json['photographerEmail']),
+      photographerPixKey:
+          serializer.fromJson<String>(json['photographerPixKey']),
+      deliveryHistoryJson:
+          serializer.fromJson<String>(json['deliveryHistoryJson']),
+      preferredInputFolder:
+          serializer.fromJson<String>(json['preferredInputFolder']),
     );
   }
   @override
@@ -1769,6 +1953,14 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       'highContrastEnabled': serializer.toJson<bool>(highContrastEnabled),
       'solarLargeFontEnabled': serializer.toJson<bool>(solarLargeFontEnabled),
       'themeMode': serializer.toJson<String>(themeMode),
+      'adminUsername': serializer.toJson<String>(adminUsername),
+      'adminPasswordHash': serializer.toJson<String>(adminPasswordHash),
+      'photographerName': serializer.toJson<String>(photographerName),
+      'photographerWhatsapp': serializer.toJson<String>(photographerWhatsapp),
+      'photographerEmail': serializer.toJson<String>(photographerEmail),
+      'photographerPixKey': serializer.toJson<String>(photographerPixKey),
+      'deliveryHistoryJson': serializer.toJson<String>(deliveryHistoryJson),
+      'preferredInputFolder': serializer.toJson<String>(preferredInputFolder),
     };
   }
 
@@ -1780,7 +1972,15 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           String? watermarkConfigJson,
           bool? highContrastEnabled,
           bool? solarLargeFontEnabled,
-          String? themeMode}) =>
+          String? themeMode,
+          String? adminUsername,
+          String? adminPasswordHash,
+          String? photographerName,
+          String? photographerWhatsapp,
+          String? photographerEmail,
+          String? photographerPixKey,
+          String? deliveryHistoryJson,
+          String? preferredInputFolder}) =>
       AppSetting(
         id: id ?? this.id,
         language: language ?? this.language,
@@ -1792,6 +1992,14 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
         solarLargeFontEnabled:
             solarLargeFontEnabled ?? this.solarLargeFontEnabled,
         themeMode: themeMode ?? this.themeMode,
+        adminUsername: adminUsername ?? this.adminUsername,
+        adminPasswordHash: adminPasswordHash ?? this.adminPasswordHash,
+        photographerName: photographerName ?? this.photographerName,
+        photographerWhatsapp: photographerWhatsapp ?? this.photographerWhatsapp,
+        photographerEmail: photographerEmail ?? this.photographerEmail,
+        photographerPixKey: photographerPixKey ?? this.photographerPixKey,
+        deliveryHistoryJson: deliveryHistoryJson ?? this.deliveryHistoryJson,
+        preferredInputFolder: preferredInputFolder ?? this.preferredInputFolder,
       );
   AppSetting copyWithCompanion(AppSettingsCompanion data) {
     return AppSetting(
@@ -1811,6 +2019,30 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           ? data.solarLargeFontEnabled.value
           : this.solarLargeFontEnabled,
       themeMode: data.themeMode.present ? data.themeMode.value : this.themeMode,
+      adminUsername: data.adminUsername.present
+          ? data.adminUsername.value
+          : this.adminUsername,
+      adminPasswordHash: data.adminPasswordHash.present
+          ? data.adminPasswordHash.value
+          : this.adminPasswordHash,
+      photographerName: data.photographerName.present
+          ? data.photographerName.value
+          : this.photographerName,
+      photographerWhatsapp: data.photographerWhatsapp.present
+          ? data.photographerWhatsapp.value
+          : this.photographerWhatsapp,
+      photographerEmail: data.photographerEmail.present
+          ? data.photographerEmail.value
+          : this.photographerEmail,
+      photographerPixKey: data.photographerPixKey.present
+          ? data.photographerPixKey.value
+          : this.photographerPixKey,
+      deliveryHistoryJson: data.deliveryHistoryJson.present
+          ? data.deliveryHistoryJson.value
+          : this.deliveryHistoryJson,
+      preferredInputFolder: data.preferredInputFolder.present
+          ? data.preferredInputFolder.value
+          : this.preferredInputFolder,
     );
   }
 
@@ -1824,7 +2056,15 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           ..write('watermarkConfigJson: $watermarkConfigJson, ')
           ..write('highContrastEnabled: $highContrastEnabled, ')
           ..write('solarLargeFontEnabled: $solarLargeFontEnabled, ')
-          ..write('themeMode: $themeMode')
+          ..write('themeMode: $themeMode, ')
+          ..write('adminUsername: $adminUsername, ')
+          ..write('adminPasswordHash: $adminPasswordHash, ')
+          ..write('photographerName: $photographerName, ')
+          ..write('photographerWhatsapp: $photographerWhatsapp, ')
+          ..write('photographerEmail: $photographerEmail, ')
+          ..write('photographerPixKey: $photographerPixKey, ')
+          ..write('deliveryHistoryJson: $deliveryHistoryJson, ')
+          ..write('preferredInputFolder: $preferredInputFolder')
           ..write(')'))
         .toString();
   }
@@ -1838,7 +2078,15 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       watermarkConfigJson,
       highContrastEnabled,
       solarLargeFontEnabled,
-      themeMode);
+      themeMode,
+      adminUsername,
+      adminPasswordHash,
+      photographerName,
+      photographerWhatsapp,
+      photographerEmail,
+      photographerPixKey,
+      deliveryHistoryJson,
+      preferredInputFolder);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1850,7 +2098,15 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           other.watermarkConfigJson == this.watermarkConfigJson &&
           other.highContrastEnabled == this.highContrastEnabled &&
           other.solarLargeFontEnabled == this.solarLargeFontEnabled &&
-          other.themeMode == this.themeMode);
+          other.themeMode == this.themeMode &&
+          other.adminUsername == this.adminUsername &&
+          other.adminPasswordHash == this.adminPasswordHash &&
+          other.photographerName == this.photographerName &&
+          other.photographerWhatsapp == this.photographerWhatsapp &&
+          other.photographerEmail == this.photographerEmail &&
+          other.photographerPixKey == this.photographerPixKey &&
+          other.deliveryHistoryJson == this.deliveryHistoryJson &&
+          other.preferredInputFolder == this.preferredInputFolder);
 }
 
 class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
@@ -1862,6 +2118,14 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
   final Value<bool> highContrastEnabled;
   final Value<bool> solarLargeFontEnabled;
   final Value<String> themeMode;
+  final Value<String> adminUsername;
+  final Value<String> adminPasswordHash;
+  final Value<String> photographerName;
+  final Value<String> photographerWhatsapp;
+  final Value<String> photographerEmail;
+  final Value<String> photographerPixKey;
+  final Value<String> deliveryHistoryJson;
+  final Value<String> preferredInputFolder;
   const AppSettingsCompanion({
     this.id = const Value.absent(),
     this.language = const Value.absent(),
@@ -1871,6 +2135,14 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.highContrastEnabled = const Value.absent(),
     this.solarLargeFontEnabled = const Value.absent(),
     this.themeMode = const Value.absent(),
+    this.adminUsername = const Value.absent(),
+    this.adminPasswordHash = const Value.absent(),
+    this.photographerName = const Value.absent(),
+    this.photographerWhatsapp = const Value.absent(),
+    this.photographerEmail = const Value.absent(),
+    this.photographerPixKey = const Value.absent(),
+    this.deliveryHistoryJson = const Value.absent(),
+    this.preferredInputFolder = const Value.absent(),
   });
   AppSettingsCompanion.insert({
     this.id = const Value.absent(),
@@ -1881,6 +2153,14 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.highContrastEnabled = const Value.absent(),
     this.solarLargeFontEnabled = const Value.absent(),
     this.themeMode = const Value.absent(),
+    this.adminUsername = const Value.absent(),
+    this.adminPasswordHash = const Value.absent(),
+    this.photographerName = const Value.absent(),
+    this.photographerWhatsapp = const Value.absent(),
+    this.photographerEmail = const Value.absent(),
+    this.photographerPixKey = const Value.absent(),
+    this.deliveryHistoryJson = const Value.absent(),
+    this.preferredInputFolder = const Value.absent(),
   });
   static Insertable<AppSetting> custom({
     Expression<int>? id,
@@ -1891,6 +2171,14 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Expression<bool>? highContrastEnabled,
     Expression<bool>? solarLargeFontEnabled,
     Expression<String>? themeMode,
+    Expression<String>? adminUsername,
+    Expression<String>? adminPasswordHash,
+    Expression<String>? photographerName,
+    Expression<String>? photographerWhatsapp,
+    Expression<String>? photographerEmail,
+    Expression<String>? photographerPixKey,
+    Expression<String>? deliveryHistoryJson,
+    Expression<String>? preferredInputFolder,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1905,6 +2193,18 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       if (solarLargeFontEnabled != null)
         'solar_large_font_enabled': solarLargeFontEnabled,
       if (themeMode != null) 'theme_mode': themeMode,
+      if (adminUsername != null) 'admin_username': adminUsername,
+      if (adminPasswordHash != null) 'admin_password_hash': adminPasswordHash,
+      if (photographerName != null) 'photographer_name': photographerName,
+      if (photographerWhatsapp != null)
+        'photographer_whatsapp': photographerWhatsapp,
+      if (photographerEmail != null) 'photographer_email': photographerEmail,
+      if (photographerPixKey != null)
+        'photographer_pix_key': photographerPixKey,
+      if (deliveryHistoryJson != null)
+        'delivery_history_json': deliveryHistoryJson,
+      if (preferredInputFolder != null)
+        'preferred_input_folder': preferredInputFolder,
     });
   }
 
@@ -1916,7 +2216,15 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       Value<String>? watermarkConfigJson,
       Value<bool>? highContrastEnabled,
       Value<bool>? solarLargeFontEnabled,
-      Value<String>? themeMode}) {
+      Value<String>? themeMode,
+      Value<String>? adminUsername,
+      Value<String>? adminPasswordHash,
+      Value<String>? photographerName,
+      Value<String>? photographerWhatsapp,
+      Value<String>? photographerEmail,
+      Value<String>? photographerPixKey,
+      Value<String>? deliveryHistoryJson,
+      Value<String>? preferredInputFolder}) {
     return AppSettingsCompanion(
       id: id ?? this.id,
       language: language ?? this.language,
@@ -1928,6 +2236,14 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       solarLargeFontEnabled:
           solarLargeFontEnabled ?? this.solarLargeFontEnabled,
       themeMode: themeMode ?? this.themeMode,
+      adminUsername: adminUsername ?? this.adminUsername,
+      adminPasswordHash: adminPasswordHash ?? this.adminPasswordHash,
+      photographerName: photographerName ?? this.photographerName,
+      photographerWhatsapp: photographerWhatsapp ?? this.photographerWhatsapp,
+      photographerEmail: photographerEmail ?? this.photographerEmail,
+      photographerPixKey: photographerPixKey ?? this.photographerPixKey,
+      deliveryHistoryJson: deliveryHistoryJson ?? this.deliveryHistoryJson,
+      preferredInputFolder: preferredInputFolder ?? this.preferredInputFolder,
     );
   }
 
@@ -1961,6 +2277,33 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     if (themeMode.present) {
       map['theme_mode'] = Variable<String>(themeMode.value);
     }
+    if (adminUsername.present) {
+      map['admin_username'] = Variable<String>(adminUsername.value);
+    }
+    if (adminPasswordHash.present) {
+      map['admin_password_hash'] = Variable<String>(adminPasswordHash.value);
+    }
+    if (photographerName.present) {
+      map['photographer_name'] = Variable<String>(photographerName.value);
+    }
+    if (photographerWhatsapp.present) {
+      map['photographer_whatsapp'] =
+          Variable<String>(photographerWhatsapp.value);
+    }
+    if (photographerEmail.present) {
+      map['photographer_email'] = Variable<String>(photographerEmail.value);
+    }
+    if (photographerPixKey.present) {
+      map['photographer_pix_key'] = Variable<String>(photographerPixKey.value);
+    }
+    if (deliveryHistoryJson.present) {
+      map['delivery_history_json'] =
+          Variable<String>(deliveryHistoryJson.value);
+    }
+    if (preferredInputFolder.present) {
+      map['preferred_input_folder'] =
+          Variable<String>(preferredInputFolder.value);
+    }
     return map;
   }
 
@@ -1974,7 +2317,15 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
           ..write('watermarkConfigJson: $watermarkConfigJson, ')
           ..write('highContrastEnabled: $highContrastEnabled, ')
           ..write('solarLargeFontEnabled: $solarLargeFontEnabled, ')
-          ..write('themeMode: $themeMode')
+          ..write('themeMode: $themeMode, ')
+          ..write('adminUsername: $adminUsername, ')
+          ..write('adminPasswordHash: $adminPasswordHash, ')
+          ..write('photographerName: $photographerName, ')
+          ..write('photographerWhatsapp: $photographerWhatsapp, ')
+          ..write('photographerEmail: $photographerEmail, ')
+          ..write('photographerPixKey: $photographerPixKey, ')
+          ..write('deliveryHistoryJson: $deliveryHistoryJson, ')
+          ..write('preferredInputFolder: $preferredInputFolder')
           ..write(')'))
         .toString();
   }
@@ -3610,6 +3961,14 @@ typedef $$AppSettingsTableCreateCompanionBuilder = AppSettingsCompanion
   Value<bool> highContrastEnabled,
   Value<bool> solarLargeFontEnabled,
   Value<String> themeMode,
+  Value<String> adminUsername,
+  Value<String> adminPasswordHash,
+  Value<String> photographerName,
+  Value<String> photographerWhatsapp,
+  Value<String> photographerEmail,
+  Value<String> photographerPixKey,
+  Value<String> deliveryHistoryJson,
+  Value<String> preferredInputFolder,
 });
 typedef $$AppSettingsTableUpdateCompanionBuilder = AppSettingsCompanion
     Function({
@@ -3621,6 +3980,14 @@ typedef $$AppSettingsTableUpdateCompanionBuilder = AppSettingsCompanion
   Value<bool> highContrastEnabled,
   Value<bool> solarLargeFontEnabled,
   Value<String> themeMode,
+  Value<String> adminUsername,
+  Value<String> adminPasswordHash,
+  Value<String> photographerName,
+  Value<String> photographerWhatsapp,
+  Value<String> photographerEmail,
+  Value<String> photographerPixKey,
+  Value<String> deliveryHistoryJson,
+  Value<String> preferredInputFolder,
 });
 
 class $$AppSettingsTableFilterComposer
@@ -3659,6 +4026,37 @@ class $$AppSettingsTableFilterComposer
 
   ColumnFilters<String> get themeMode => $composableBuilder(
       column: $table.themeMode, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get adminUsername => $composableBuilder(
+      column: $table.adminUsername, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get adminPasswordHash => $composableBuilder(
+      column: $table.adminPasswordHash,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get photographerName => $composableBuilder(
+      column: $table.photographerName,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get photographerWhatsapp => $composableBuilder(
+      column: $table.photographerWhatsapp,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get photographerEmail => $composableBuilder(
+      column: $table.photographerEmail,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get photographerPixKey => $composableBuilder(
+      column: $table.photographerPixKey,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get deliveryHistoryJson => $composableBuilder(
+      column: $table.deliveryHistoryJson,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get preferredInputFolder => $composableBuilder(
+      column: $table.preferredInputFolder,
+      builder: (column) => ColumnFilters(column));
 }
 
 class $$AppSettingsTableOrderingComposer
@@ -3697,6 +4095,38 @@ class $$AppSettingsTableOrderingComposer
 
   ColumnOrderings<String> get themeMode => $composableBuilder(
       column: $table.themeMode, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get adminUsername => $composableBuilder(
+      column: $table.adminUsername,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get adminPasswordHash => $composableBuilder(
+      column: $table.adminPasswordHash,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get photographerName => $composableBuilder(
+      column: $table.photographerName,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get photographerWhatsapp => $composableBuilder(
+      column: $table.photographerWhatsapp,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get photographerEmail => $composableBuilder(
+      column: $table.photographerEmail,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get photographerPixKey => $composableBuilder(
+      column: $table.photographerPixKey,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get deliveryHistoryJson => $composableBuilder(
+      column: $table.deliveryHistoryJson,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get preferredInputFolder => $composableBuilder(
+      column: $table.preferredInputFolder,
+      builder: (column) => ColumnOrderings(column));
 }
 
 class $$AppSettingsTableAnnotationComposer
@@ -3731,6 +4161,30 @@ class $$AppSettingsTableAnnotationComposer
 
   GeneratedColumn<String> get themeMode =>
       $composableBuilder(column: $table.themeMode, builder: (column) => column);
+
+  GeneratedColumn<String> get adminUsername => $composableBuilder(
+      column: $table.adminUsername, builder: (column) => column);
+
+  GeneratedColumn<String> get adminPasswordHash => $composableBuilder(
+      column: $table.adminPasswordHash, builder: (column) => column);
+
+  GeneratedColumn<String> get photographerName => $composableBuilder(
+      column: $table.photographerName, builder: (column) => column);
+
+  GeneratedColumn<String> get photographerWhatsapp => $composableBuilder(
+      column: $table.photographerWhatsapp, builder: (column) => column);
+
+  GeneratedColumn<String> get photographerEmail => $composableBuilder(
+      column: $table.photographerEmail, builder: (column) => column);
+
+  GeneratedColumn<String> get photographerPixKey => $composableBuilder(
+      column: $table.photographerPixKey, builder: (column) => column);
+
+  GeneratedColumn<String> get deliveryHistoryJson => $composableBuilder(
+      column: $table.deliveryHistoryJson, builder: (column) => column);
+
+  GeneratedColumn<String> get preferredInputFolder => $composableBuilder(
+      column: $table.preferredInputFolder, builder: (column) => column);
 }
 
 class $$AppSettingsTableTableManager extends RootTableManager<
@@ -3764,6 +4218,14 @@ class $$AppSettingsTableTableManager extends RootTableManager<
             Value<bool> highContrastEnabled = const Value.absent(),
             Value<bool> solarLargeFontEnabled = const Value.absent(),
             Value<String> themeMode = const Value.absent(),
+            Value<String> adminUsername = const Value.absent(),
+            Value<String> adminPasswordHash = const Value.absent(),
+            Value<String> photographerName = const Value.absent(),
+            Value<String> photographerWhatsapp = const Value.absent(),
+            Value<String> photographerEmail = const Value.absent(),
+            Value<String> photographerPixKey = const Value.absent(),
+            Value<String> deliveryHistoryJson = const Value.absent(),
+            Value<String> preferredInputFolder = const Value.absent(),
           }) =>
               AppSettingsCompanion(
             id: id,
@@ -3774,6 +4236,14 @@ class $$AppSettingsTableTableManager extends RootTableManager<
             highContrastEnabled: highContrastEnabled,
             solarLargeFontEnabled: solarLargeFontEnabled,
             themeMode: themeMode,
+            adminUsername: adminUsername,
+            adminPasswordHash: adminPasswordHash,
+            photographerName: photographerName,
+            photographerWhatsapp: photographerWhatsapp,
+            photographerEmail: photographerEmail,
+            photographerPixKey: photographerPixKey,
+            deliveryHistoryJson: deliveryHistoryJson,
+            preferredInputFolder: preferredInputFolder,
           ),
           createCompanionCallback: ({
             Value<int> id = const Value.absent(),
@@ -3784,6 +4254,14 @@ class $$AppSettingsTableTableManager extends RootTableManager<
             Value<bool> highContrastEnabled = const Value.absent(),
             Value<bool> solarLargeFontEnabled = const Value.absent(),
             Value<String> themeMode = const Value.absent(),
+            Value<String> adminUsername = const Value.absent(),
+            Value<String> adminPasswordHash = const Value.absent(),
+            Value<String> photographerName = const Value.absent(),
+            Value<String> photographerWhatsapp = const Value.absent(),
+            Value<String> photographerEmail = const Value.absent(),
+            Value<String> photographerPixKey = const Value.absent(),
+            Value<String> deliveryHistoryJson = const Value.absent(),
+            Value<String> preferredInputFolder = const Value.absent(),
           }) =>
               AppSettingsCompanion.insert(
             id: id,
@@ -3794,6 +4272,14 @@ class $$AppSettingsTableTableManager extends RootTableManager<
             highContrastEnabled: highContrastEnabled,
             solarLargeFontEnabled: solarLargeFontEnabled,
             themeMode: themeMode,
+            adminUsername: adminUsername,
+            adminPasswordHash: adminPasswordHash,
+            photographerName: photographerName,
+            photographerWhatsapp: photographerWhatsapp,
+            photographerEmail: photographerEmail,
+            photographerPixKey: photographerPixKey,
+            deliveryHistoryJson: deliveryHistoryJson,
+            preferredInputFolder: preferredInputFolder,
           ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

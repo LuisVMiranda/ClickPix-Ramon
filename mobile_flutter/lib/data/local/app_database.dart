@@ -27,7 +27,8 @@ class PhotoAssets extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-@TableIndex(name: 'orders_status_created_at_idx', columns: {#status, #createdAt})
+@TableIndex(
+    name: 'orders_status_created_at_idx', columns: {#status, #createdAt})
 class Orders extends Table {
   TextColumn get id => text()();
   TextColumn get clientId => text()();
@@ -58,24 +59,44 @@ class AppSettings extends Table {
   IntColumn get id => integer().withDefault(const Constant(1))();
   TextColumn get language => text().withDefault(const Constant('pt-BR'))();
   BoolColumn get wifiOnly => boolean().withDefault(const Constant(false))();
-  IntColumn get accessCodeValidityDays => integer().withDefault(const Constant(7))();
-  TextColumn get watermarkConfigJson => text().withDefault(const Constant('{}'))();
-  BoolColumn get highContrastEnabled => boolean().withDefault(const Constant(false))();
-  BoolColumn get solarLargeFontEnabled => boolean().withDefault(const Constant(false))();
+  IntColumn get accessCodeValidityDays =>
+      integer().withDefault(const Constant(7))();
+  TextColumn get watermarkConfigJson =>
+      text().withDefault(const Constant('{}'))();
+  BoolColumn get highContrastEnabled =>
+      boolean().withDefault(const Constant(false))();
+  BoolColumn get solarLargeFontEnabled =>
+      boolean().withDefault(const Constant(false))();
   TextColumn get themeMode => text().withDefault(const Constant('system'))();
+  TextColumn get adminUsername => text().withDefault(const Constant('admin'))();
+  TextColumn get adminPasswordHash => text().withDefault(const Constant(
+      '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9'))();
+  TextColumn get photographerName =>
+      text().withDefault(const Constant('Fotografo'))();
+  TextColumn get photographerWhatsapp =>
+      text().withDefault(const Constant(''))();
+  TextColumn get photographerEmail => text().withDefault(const Constant(''))();
+  TextColumn get photographerPixKey => text().withDefault(const Constant(''))();
+  TextColumn get deliveryHistoryJson =>
+      text().withDefault(const Constant('[]'))();
+  TextColumn get preferredInputFolder =>
+      text().withDefault(const Constant(''))();
 
   @override
   Set<Column> get primaryKey => {id};
 }
 
-@TableIndex(name: 'upload_tasks_status_next_attempt_idx', columns: {#status, #nextAttemptAt})
+@TableIndex(
+    name: 'upload_tasks_status_next_attempt_idx',
+    columns: {#status, #nextAttemptAt})
 @TableIndex(name: 'upload_tasks_order_id_idx', columns: {#orderId})
 class UploadTasks extends Table {
   TextColumn get id => text()();
   TextColumn get orderId => text().references(Orders, #id)();
   TextColumn get status => text()();
   IntColumn get retryCount => integer().withDefault(const Constant(0))();
-  DateTimeColumn get nextAttemptAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get nextAttemptAt =>
+      dateTime().withDefault(currentDateAndTime)();
   TextColumn get lastError => text().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 
@@ -83,12 +104,19 @@ class UploadTasks extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-@DriftDatabase(tables: [Clients, PhotoAssets, Orders, OrderItems, AppSettings, UploadTasks])
+@DriftDatabase(tables: [
+  Clients,
+  PhotoAssets,
+  Orders,
+  OrderItems,
+  AppSettings,
+  UploadTasks
+])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -119,6 +147,16 @@ class AppDatabase extends _$AppDatabase {
             await m.database.customStatement(
               'CREATE INDEX IF NOT EXISTS upload_tasks_order_id_idx ON upload_tasks (order_id)',
             );
+          }
+          if (from >= 2 && from < 6) {
+            await m.addColumn(appSettings, appSettings.adminUsername);
+            await m.addColumn(appSettings, appSettings.adminPasswordHash);
+            await m.addColumn(appSettings, appSettings.photographerName);
+            await m.addColumn(appSettings, appSettings.photographerWhatsapp);
+            await m.addColumn(appSettings, appSettings.photographerEmail);
+            await m.addColumn(appSettings, appSettings.photographerPixKey);
+            await m.addColumn(appSettings, appSettings.deliveryHistoryJson);
+            await m.addColumn(appSettings, appSettings.preferredInputFolder);
           }
         },
       );

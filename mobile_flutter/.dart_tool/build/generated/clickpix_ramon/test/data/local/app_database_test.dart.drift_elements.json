@@ -1,1 +1,0 @@
-{"valid_import":true,"imports":[{"uri":"package:clickpix_ramon/data/local/app_database.dart","transitive":false},{"uri":"package:drift/drift.dart","transitive":false},{"uri":"package:drift/native.dart","transitive":false},{"uri":"package:flutter_test/flutter_test.dart","transitive":false},{"uri":"package:sqlite3/sqlite3.dart","transitive":false}],"elements":[]}

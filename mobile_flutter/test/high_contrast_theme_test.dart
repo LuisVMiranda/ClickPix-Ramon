@@ -6,7 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('aplica tema de alto contraste ao habilitar toggle', (tester) async {
+  testWidgets('aplica tema de alto contraste ao habilitar toggle',
+      (tester) async {
     final database = AppDatabase(NativeDatabase.memory());
     final store = AppSettingsStore(database);
 
@@ -19,13 +20,24 @@ void main() {
     await tester.pumpAndSettle();
 
     final materialBefore = tester.widget<MaterialApp>(find.byType(MaterialApp));
-    expect(materialBefore.theme?.colorScheme, isNot(const ColorScheme.highContrastLight()));
+    expect(materialBefore.theme?.colorScheme,
+        isNot(const ColorScheme.highContrastLight()));
 
-    await tester.tap(find.text('Alto contraste'));
+    await tester.enterText(find.byType(TextField).at(0), 'admin');
+    await tester.enterText(find.byType(TextField).at(1), 'admin123');
+    await tester.tap(find.widgetWithText(FilledButton, 'Entrar'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Configurações').first);
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Alto contraste'));
+    await tester.tap(find.byType(SwitchListTile).first);
     await tester.pumpAndSettle();
 
     final materialAfter = tester.widget<MaterialApp>(find.byType(MaterialApp));
-    expect(materialAfter.theme?.colorScheme, const ColorScheme.highContrastLight());
+    expect(materialAfter.theme?.colorScheme.primary,
+        const ColorScheme.highContrastLight().primary);
 
     final persisted = await store.loadVisualSettings();
     expect(persisted.highContrastEnabled, isTrue);

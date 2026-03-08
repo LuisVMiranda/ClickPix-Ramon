@@ -1,7 +1,0 @@
-{
-  "elements": {},
-  "imports": [
-    "package:clickpix_ramon/domain/value_objects/order_status_transition.dart",
-    "package:flutter_test/flutter_test.dart"
-  ]
-}

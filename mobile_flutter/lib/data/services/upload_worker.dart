@@ -52,7 +52,7 @@ class UploadWorkerScheduler {
       'clickpix-upload-queue',
       uploadQueueWorkerTaskName,
       constraints: Constraints(networkType: NetworkType.connected),
-      existingWorkPolicy: ExistingWorkPolicy.keep,
+      existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
       frequency: const Duration(minutes: 15),
       backoffPolicy: BackoffPolicy.exponential,
       backoffPolicyDelay: const Duration(minutes: 1),

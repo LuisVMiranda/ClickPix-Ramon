@@ -1,8 +1,0 @@
-{
-  "elements": {},
-  "imports": [
-    "package:clickpix_ramon/domain/entities/order.dart",
-    "package:clickpix_ramon/domain/use_cases/watch_order_payment_status.dart",
-    "package:flutter_test/flutter_test.dart"
-  ]
-}

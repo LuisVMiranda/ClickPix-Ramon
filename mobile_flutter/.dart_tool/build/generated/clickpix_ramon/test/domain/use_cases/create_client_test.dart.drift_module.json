@@ -1,8 +1,0 @@
-{
-  "elements": {},
-  "imports": [
-    "package:clickpix_ramon/domain/repositories/client_repository.dart",
-    "package:clickpix_ramon/domain/use_cases/create_client.dart",
-    "package:flutter_test/flutter_test.dart"
-  ]
-}

@@ -1,6 +1,0 @@
-{
-  "elements": {},
-  "imports": [
-    "package:clickpix_ramon/domain/repositories/client_repository.dart"
-  ]
-}

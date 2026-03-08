@@ -1,7 +1,0 @@
-{
-  "elements": {},
-  "imports": [
-    "package:clickpix_ramon/data/services/photo_ingestion_service.dart",
-    "package:flutter_test/flutter_test.dart"
-  ]
-}

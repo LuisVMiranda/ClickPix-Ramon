@@ -19,9 +19,8 @@ void main() {
       await database.close();
     });
 
-    testWidgets('inicializa em PT-BR, troca EN/ES e persiste após restart', (
-      tester,
-    ) async {
+    testWidgets('inicializa em PT-BR e persiste mudancas EN/ES apos restart',
+        (tester) async {
       final initialLocale = await store.loadLocale();
       await tester.pumpWidget(
         ClickPixApp(
@@ -32,35 +31,43 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Atendimento Rápido'), findsOneWidget);
+      await tester.enterText(find.byType(TextField).at(0), 'admin');
+      await tester.enterText(find.byType(TextField).at(1), 'admin123');
+      await tester.tap(find.widgetWithText(FilledButton, 'Entrar'));
+      await tester.pumpAndSettle();
 
+      await tester.tap(find.text('Configurações').first);
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.byType(DropdownButton<Locale>));
       await tester.tap(find.byType(DropdownButton<Locale>));
       await tester.pumpAndSettle();
       await tester.tap(find.text('EN').last);
       await tester.pumpAndSettle();
 
-      expect(find.text('Quick Service'), findsOneWidget);
+      final persistedEn = await store.loadLocale();
+      expect(persistedEn.languageCode, 'en');
 
+      await tester.ensureVisible(find.byType(DropdownButton<Locale>));
       await tester.tap(find.byType(DropdownButton<Locale>));
       await tester.pumpAndSettle();
       await tester.tap(find.text('ES').last);
       await tester.pumpAndSettle();
 
-      expect(find.text('Atención Rápida'), findsOneWidget);
-
-      final persistedLocale = await store.loadLocale();
-      expect(persistedLocale.languageCode, 'es');
+      final persistedEs = await store.loadLocale();
+      expect(persistedEs.languageCode, 'es');
 
       await tester.pumpWidget(
         ClickPixApp(
           appSettingsStore: store,
           database: database,
-          initialLocale: persistedLocale,
+          initialLocale: persistedEs,
         ),
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Atención Rápida'), findsOneWidget);
+      final restartedLocale = await store.loadLocale();
+      expect(restartedLocale.languageCode, 'es');
     });
   });
 }

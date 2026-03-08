@@ -6,7 +6,7 @@ import 'package:sqlite3/sqlite3.dart' as sqlite;
 
 void main() {
   group('AppDatabase migration', () {
-    test('migrates schema v1 to v5 preserving existing data', () async {
+    test('migrates schema v1 to v6 preserving existing data', () async {
       final sqliteDb = sqlite.sqlite3.openInMemory();
       sqliteDb.execute('''
         CREATE TABLE clients (
@@ -50,55 +50,67 @@ void main() {
 
       final database = AppDatabase(NativeDatabase.opened(sqliteDb));
 
-      expect(database.schemaVersion, 5);
+      expect(database.schemaVersion, 6);
 
       final orders = await database.select(database.orders).get();
       expect(orders, hasLength(1));
       expect(orders.single.externalReference, 'PFBR-20260101-ABCD-1234');
 
-      final orderItemsTableExists = await database.customSelect(
-        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'order_items';",
-      ).getSingleOrNull();
-      final appSettingsTableExists = await database.customSelect(
-        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'app_settings';",
-      ).getSingleOrNull();
-      final uploadTasksTableExists = await database.customSelect(
-        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'upload_tasks';",
-      ).getSingleOrNull();
+      final orderItemsTableExists = await database
+          .customSelect(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'order_items';",
+          )
+          .getSingleOrNull();
+      final appSettingsTableExists = await database
+          .customSelect(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'app_settings';",
+          )
+          .getSingleOrNull();
+      final uploadTasksTableExists = await database
+          .customSelect(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'upload_tasks';",
+          )
+          .getSingleOrNull();
 
       expect(orderItemsTableExists, isNotNull);
       expect(appSettingsTableExists, isNotNull);
       expect(uploadTasksTableExists, isNotNull);
 
-      final ordersIndexes = await database.customSelect(
-        "PRAGMA index_list('orders');",
-      ).get();
-      final photoAssetsIndexes = await database.customSelect(
-        "PRAGMA index_list('photo_assets');",
-      ).get();
-      final uploadTaskIndexes = await database.customSelect(
-        "PRAGMA index_list('upload_tasks');",
-      ).get();
+      final ordersIndexes = await database
+          .customSelect(
+            "PRAGMA index_list('orders');",
+          )
+          .get();
+      final photoAssetsIndexes = await database
+          .customSelect(
+            "PRAGMA index_list('photo_assets');",
+          )
+          .get();
+      final uploadTaskIndexes = await database
+          .customSelect(
+            "PRAGMA index_list('upload_tasks');",
+          )
+          .get();
 
-      final orderIndexNames = ordersIndexes
-          .map((row) => row.read<String>('name'))
-          .toSet();
-      final photoIndexNames = photoAssetsIndexes
-          .map((row) => row.read<String>('name'))
-          .toSet();
-      final uploadTaskIndexNames = uploadTaskIndexes
-          .map((row) => row.read<String>('name'))
-          .toSet();
+      final orderIndexNames =
+          ordersIndexes.map((row) => row.read<String>('name')).toSet();
+      final photoIndexNames =
+          photoAssetsIndexes.map((row) => row.read<String>('name')).toSet();
+      final uploadTaskIndexNames =
+          uploadTaskIndexes.map((row) => row.read<String>('name')).toSet();
 
       expect(orderIndexNames, contains('orders_status_created_at_idx'));
       expect(photoIndexNames, contains('photo_assets_captured_at_idx'));
       expect(
         orderIndexNames.any(
-          (name) => name == 'orders_external_reference' || name.startsWith('sqlite_autoindex_orders'),
+          (name) =>
+              name == 'orders_external_reference' ||
+              name.startsWith('sqlite_autoindex_orders'),
         ),
         isTrue,
       );
-      expect(uploadTaskIndexNames, contains('upload_tasks_status_next_attempt_idx'));
+      expect(uploadTaskIndexNames,
+          contains('upload_tasks_status_next_attempt_idx'));
 
       await database.close();
     });
