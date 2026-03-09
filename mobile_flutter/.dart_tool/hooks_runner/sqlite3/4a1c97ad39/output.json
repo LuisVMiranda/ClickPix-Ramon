@@ -2,7 +2,7 @@
   "assets": [
     {
       "encoding": {
-        "file": "C:\\Users\\Admin\\Documents\\GitHub\\ClickPix-Ramon\\mobile_flutter\\.dart_tool\\hooks_runner\\shared\\sqlite3\\build\\download-1dfad9e2\\sqlite3.dll",
+        "file": "C:\\Users\\Admin\\Documents\\GitHub\\ClickPix-Ramon\\mobile_flutter\\.dart_tool\\hooks_runner\\shared\\sqlite3\\build\\download-176cdbda\\sqlite3.dll",
         "id": "package:sqlite3/src/ffi/libsqlite3.g.dart",
         "link_mode": {
           "type": "dynamic_loading_bundle"
@@ -13,5 +13,5 @@
   ],
   "assets_for_linking": {},
   "status": "success",
-  "timestamp": "2026-03-08 16:00:28.000"
+  "timestamp": "2026-03-09 14:17:03.000"
 }

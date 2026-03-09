@@ -1597,6 +1597,14 @@ class $AppSettingsTable extends AppSettings
       type: DriftSqlType.string,
       requiredDuringInsert: false,
       defaultValue: const Constant('system'));
+  static const VerificationMeta _accentColorKeyMeta =
+      const VerificationMeta('accentColorKey');
+  @override
+  late final GeneratedColumn<String> accentColorKey = GeneratedColumn<String>(
+      'accent_color_key', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('blue_mid'));
   static const VerificationMeta _adminUsernameMeta =
       const VerificationMeta('adminUsername');
   @override
@@ -1621,7 +1629,7 @@ class $AppSettingsTable extends AppSettings
       'photographer_name', aliasedName, false,
       type: DriftSqlType.string,
       requiredDuringInsert: false,
-      defaultValue: const Constant('Fotografo'));
+      defaultValue: const Constant('Fotógrafo'));
   static const VerificationMeta _photographerWhatsappMeta =
       const VerificationMeta('photographerWhatsapp');
   @override
@@ -1646,6 +1654,38 @@ class $AppSettingsTable extends AppSettings
           type: DriftSqlType.string,
           requiredDuringInsert: false,
           defaultValue: const Constant(''));
+  static const VerificationMeta _photographerPaypalMeta =
+      const VerificationMeta('photographerPaypal');
+  @override
+  late final GeneratedColumn<String> photographerPaypal =
+      GeneratedColumn<String>('photographer_paypal', aliasedName, false,
+          type: DriftSqlType.string,
+          requiredDuringInsert: false,
+          defaultValue: const Constant(''));
+  static const VerificationMeta _paymentProviderMeta =
+      const VerificationMeta('paymentProvider');
+  @override
+  late final GeneratedColumn<String> paymentProvider = GeneratedColumn<String>(
+      'payment_provider', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('manual'));
+  static const VerificationMeta _paymentApiBaseUrlMeta =
+      const VerificationMeta('paymentApiBaseUrl');
+  @override
+  late final GeneratedColumn<String> paymentApiBaseUrl =
+      GeneratedColumn<String>('payment_api_base_url', aliasedName, false,
+          type: DriftSqlType.string,
+          requiredDuringInsert: false,
+          defaultValue: const Constant(''));
+  static const VerificationMeta _paymentApiTokenMeta =
+      const VerificationMeta('paymentApiToken');
+  @override
+  late final GeneratedColumn<String> paymentApiToken = GeneratedColumn<String>(
+      'payment_api_token', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(''));
   static const VerificationMeta _deliveryHistoryJsonMeta =
       const VerificationMeta('deliveryHistoryJson');
   @override
@@ -1662,6 +1702,23 @@ class $AppSettingsTable extends AppSettings
           type: DriftSqlType.string,
           requiredDuringInsert: false,
           defaultValue: const Constant(''));
+  static const VerificationMeta _pictureCombosJsonMeta =
+      const VerificationMeta('pictureCombosJson');
+  @override
+  late final GeneratedColumn<String> pictureCombosJson =
+      GeneratedColumn<String>('picture_combos_json', aliasedName, false,
+          type: DriftSqlType.string,
+          requiredDuringInsert: false,
+          defaultValue: const Constant('[]'));
+  static const VerificationMeta _lastSelectedPictureComboIdMeta =
+      const VerificationMeta('lastSelectedPictureComboId');
+  @override
+  late final GeneratedColumn<String> lastSelectedPictureComboId =
+      GeneratedColumn<String>(
+          'last_selected_picture_combo_id', aliasedName, false,
+          type: DriftSqlType.string,
+          requiredDuringInsert: false,
+          defaultValue: const Constant(''));
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -1672,14 +1729,21 @@ class $AppSettingsTable extends AppSettings
         highContrastEnabled,
         solarLargeFontEnabled,
         themeMode,
+        accentColorKey,
         adminUsername,
         adminPasswordHash,
         photographerName,
         photographerWhatsapp,
         photographerEmail,
         photographerPixKey,
+        photographerPaypal,
+        paymentProvider,
+        paymentApiBaseUrl,
+        paymentApiToken,
         deliveryHistoryJson,
-        preferredInputFolder
+        preferredInputFolder,
+        pictureCombosJson,
+        lastSelectedPictureComboId
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1730,6 +1794,12 @@ class $AppSettingsTable extends AppSettings
       context.handle(_themeModeMeta,
           themeMode.isAcceptableOrUnknown(data['theme_mode']!, _themeModeMeta));
     }
+    if (data.containsKey('accent_color_key')) {
+      context.handle(
+          _accentColorKeyMeta,
+          accentColorKey.isAcceptableOrUnknown(
+              data['accent_color_key']!, _accentColorKeyMeta));
+    }
     if (data.containsKey('admin_username')) {
       context.handle(
           _adminUsernameMeta,
@@ -1766,6 +1836,30 @@ class $AppSettingsTable extends AppSettings
           photographerPixKey.isAcceptableOrUnknown(
               data['photographer_pix_key']!, _photographerPixKeyMeta));
     }
+    if (data.containsKey('photographer_paypal')) {
+      context.handle(
+          _photographerPaypalMeta,
+          photographerPaypal.isAcceptableOrUnknown(
+              data['photographer_paypal']!, _photographerPaypalMeta));
+    }
+    if (data.containsKey('payment_provider')) {
+      context.handle(
+          _paymentProviderMeta,
+          paymentProvider.isAcceptableOrUnknown(
+              data['payment_provider']!, _paymentProviderMeta));
+    }
+    if (data.containsKey('payment_api_base_url')) {
+      context.handle(
+          _paymentApiBaseUrlMeta,
+          paymentApiBaseUrl.isAcceptableOrUnknown(
+              data['payment_api_base_url']!, _paymentApiBaseUrlMeta));
+    }
+    if (data.containsKey('payment_api_token')) {
+      context.handle(
+          _paymentApiTokenMeta,
+          paymentApiToken.isAcceptableOrUnknown(
+              data['payment_api_token']!, _paymentApiTokenMeta));
+    }
     if (data.containsKey('delivery_history_json')) {
       context.handle(
           _deliveryHistoryJsonMeta,
@@ -1777,6 +1871,19 @@ class $AppSettingsTable extends AppSettings
           _preferredInputFolderMeta,
           preferredInputFolder.isAcceptableOrUnknown(
               data['preferred_input_folder']!, _preferredInputFolderMeta));
+    }
+    if (data.containsKey('picture_combos_json')) {
+      context.handle(
+          _pictureCombosJsonMeta,
+          pictureCombosJson.isAcceptableOrUnknown(
+              data['picture_combos_json']!, _pictureCombosJsonMeta));
+    }
+    if (data.containsKey('last_selected_picture_combo_id')) {
+      context.handle(
+          _lastSelectedPictureComboIdMeta,
+          lastSelectedPictureComboId.isAcceptableOrUnknown(
+              data['last_selected_picture_combo_id']!,
+              _lastSelectedPictureComboIdMeta));
     }
     return context;
   }
@@ -1806,6 +1913,8 @@ class $AppSettingsTable extends AppSettings
           data['${effectivePrefix}solar_large_font_enabled'])!,
       themeMode: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}theme_mode'])!,
+      accentColorKey: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}accent_color_key'])!,
       adminUsername: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}admin_username'])!,
       adminPasswordHash: attachedDatabase.typeMapping.read(
@@ -1819,12 +1928,25 @@ class $AppSettingsTable extends AppSettings
           DriftSqlType.string, data['${effectivePrefix}photographer_email'])!,
       photographerPixKey: attachedDatabase.typeMapping.read(
           DriftSqlType.string, data['${effectivePrefix}photographer_pix_key'])!,
+      photographerPaypal: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}photographer_paypal'])!,
+      paymentProvider: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}payment_provider'])!,
+      paymentApiBaseUrl: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}payment_api_base_url'])!,
+      paymentApiToken: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}payment_api_token'])!,
       deliveryHistoryJson: attachedDatabase.typeMapping.read(
           DriftSqlType.string,
           data['${effectivePrefix}delivery_history_json'])!,
       preferredInputFolder: attachedDatabase.typeMapping.read(
           DriftSqlType.string,
           data['${effectivePrefix}preferred_input_folder'])!,
+      pictureCombosJson: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}picture_combos_json'])!,
+      lastSelectedPictureComboId: attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}last_selected_picture_combo_id'])!,
     );
   }
 
@@ -1843,14 +1965,21 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
   final bool highContrastEnabled;
   final bool solarLargeFontEnabled;
   final String themeMode;
+  final String accentColorKey;
   final String adminUsername;
   final String adminPasswordHash;
   final String photographerName;
   final String photographerWhatsapp;
   final String photographerEmail;
   final String photographerPixKey;
+  final String photographerPaypal;
+  final String paymentProvider;
+  final String paymentApiBaseUrl;
+  final String paymentApiToken;
   final String deliveryHistoryJson;
   final String preferredInputFolder;
+  final String pictureCombosJson;
+  final String lastSelectedPictureComboId;
   const AppSetting(
       {required this.id,
       required this.language,
@@ -1860,14 +1989,21 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       required this.highContrastEnabled,
       required this.solarLargeFontEnabled,
       required this.themeMode,
+      required this.accentColorKey,
       required this.adminUsername,
       required this.adminPasswordHash,
       required this.photographerName,
       required this.photographerWhatsapp,
       required this.photographerEmail,
       required this.photographerPixKey,
+      required this.photographerPaypal,
+      required this.paymentProvider,
+      required this.paymentApiBaseUrl,
+      required this.paymentApiToken,
       required this.deliveryHistoryJson,
-      required this.preferredInputFolder});
+      required this.preferredInputFolder,
+      required this.pictureCombosJson,
+      required this.lastSelectedPictureComboId});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -1879,14 +2015,22 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     map['high_contrast_enabled'] = Variable<bool>(highContrastEnabled);
     map['solar_large_font_enabled'] = Variable<bool>(solarLargeFontEnabled);
     map['theme_mode'] = Variable<String>(themeMode);
+    map['accent_color_key'] = Variable<String>(accentColorKey);
     map['admin_username'] = Variable<String>(adminUsername);
     map['admin_password_hash'] = Variable<String>(adminPasswordHash);
     map['photographer_name'] = Variable<String>(photographerName);
     map['photographer_whatsapp'] = Variable<String>(photographerWhatsapp);
     map['photographer_email'] = Variable<String>(photographerEmail);
     map['photographer_pix_key'] = Variable<String>(photographerPixKey);
+    map['photographer_paypal'] = Variable<String>(photographerPaypal);
+    map['payment_provider'] = Variable<String>(paymentProvider);
+    map['payment_api_base_url'] = Variable<String>(paymentApiBaseUrl);
+    map['payment_api_token'] = Variable<String>(paymentApiToken);
     map['delivery_history_json'] = Variable<String>(deliveryHistoryJson);
     map['preferred_input_folder'] = Variable<String>(preferredInputFolder);
+    map['picture_combos_json'] = Variable<String>(pictureCombosJson);
+    map['last_selected_picture_combo_id'] =
+        Variable<String>(lastSelectedPictureComboId);
     return map;
   }
 
@@ -1900,14 +2044,21 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       highContrastEnabled: Value(highContrastEnabled),
       solarLargeFontEnabled: Value(solarLargeFontEnabled),
       themeMode: Value(themeMode),
+      accentColorKey: Value(accentColorKey),
       adminUsername: Value(adminUsername),
       adminPasswordHash: Value(adminPasswordHash),
       photographerName: Value(photographerName),
       photographerWhatsapp: Value(photographerWhatsapp),
       photographerEmail: Value(photographerEmail),
       photographerPixKey: Value(photographerPixKey),
+      photographerPaypal: Value(photographerPaypal),
+      paymentProvider: Value(paymentProvider),
+      paymentApiBaseUrl: Value(paymentApiBaseUrl),
+      paymentApiToken: Value(paymentApiToken),
       deliveryHistoryJson: Value(deliveryHistoryJson),
       preferredInputFolder: Value(preferredInputFolder),
+      pictureCombosJson: Value(pictureCombosJson),
+      lastSelectedPictureComboId: Value(lastSelectedPictureComboId),
     );
   }
 
@@ -1927,6 +2078,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       solarLargeFontEnabled:
           serializer.fromJson<bool>(json['solarLargeFontEnabled']),
       themeMode: serializer.fromJson<String>(json['themeMode']),
+      accentColorKey: serializer.fromJson<String>(json['accentColorKey']),
       adminUsername: serializer.fromJson<String>(json['adminUsername']),
       adminPasswordHash: serializer.fromJson<String>(json['adminPasswordHash']),
       photographerName: serializer.fromJson<String>(json['photographerName']),
@@ -1935,10 +2087,18 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       photographerEmail: serializer.fromJson<String>(json['photographerEmail']),
       photographerPixKey:
           serializer.fromJson<String>(json['photographerPixKey']),
+      photographerPaypal:
+          serializer.fromJson<String>(json['photographerPaypal']),
+      paymentProvider: serializer.fromJson<String>(json['paymentProvider']),
+      paymentApiBaseUrl: serializer.fromJson<String>(json['paymentApiBaseUrl']),
+      paymentApiToken: serializer.fromJson<String>(json['paymentApiToken']),
       deliveryHistoryJson:
           serializer.fromJson<String>(json['deliveryHistoryJson']),
       preferredInputFolder:
           serializer.fromJson<String>(json['preferredInputFolder']),
+      pictureCombosJson: serializer.fromJson<String>(json['pictureCombosJson']),
+      lastSelectedPictureComboId:
+          serializer.fromJson<String>(json['lastSelectedPictureComboId']),
     );
   }
   @override
@@ -1953,14 +2113,22 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       'highContrastEnabled': serializer.toJson<bool>(highContrastEnabled),
       'solarLargeFontEnabled': serializer.toJson<bool>(solarLargeFontEnabled),
       'themeMode': serializer.toJson<String>(themeMode),
+      'accentColorKey': serializer.toJson<String>(accentColorKey),
       'adminUsername': serializer.toJson<String>(adminUsername),
       'adminPasswordHash': serializer.toJson<String>(adminPasswordHash),
       'photographerName': serializer.toJson<String>(photographerName),
       'photographerWhatsapp': serializer.toJson<String>(photographerWhatsapp),
       'photographerEmail': serializer.toJson<String>(photographerEmail),
       'photographerPixKey': serializer.toJson<String>(photographerPixKey),
+      'photographerPaypal': serializer.toJson<String>(photographerPaypal),
+      'paymentProvider': serializer.toJson<String>(paymentProvider),
+      'paymentApiBaseUrl': serializer.toJson<String>(paymentApiBaseUrl),
+      'paymentApiToken': serializer.toJson<String>(paymentApiToken),
       'deliveryHistoryJson': serializer.toJson<String>(deliveryHistoryJson),
       'preferredInputFolder': serializer.toJson<String>(preferredInputFolder),
+      'pictureCombosJson': serializer.toJson<String>(pictureCombosJson),
+      'lastSelectedPictureComboId':
+          serializer.toJson<String>(lastSelectedPictureComboId),
     };
   }
 
@@ -1973,14 +2141,21 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           bool? highContrastEnabled,
           bool? solarLargeFontEnabled,
           String? themeMode,
+          String? accentColorKey,
           String? adminUsername,
           String? adminPasswordHash,
           String? photographerName,
           String? photographerWhatsapp,
           String? photographerEmail,
           String? photographerPixKey,
+          String? photographerPaypal,
+          String? paymentProvider,
+          String? paymentApiBaseUrl,
+          String? paymentApiToken,
           String? deliveryHistoryJson,
-          String? preferredInputFolder}) =>
+          String? preferredInputFolder,
+          String? pictureCombosJson,
+          String? lastSelectedPictureComboId}) =>
       AppSetting(
         id: id ?? this.id,
         language: language ?? this.language,
@@ -1992,14 +2167,22 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
         solarLargeFontEnabled:
             solarLargeFontEnabled ?? this.solarLargeFontEnabled,
         themeMode: themeMode ?? this.themeMode,
+        accentColorKey: accentColorKey ?? this.accentColorKey,
         adminUsername: adminUsername ?? this.adminUsername,
         adminPasswordHash: adminPasswordHash ?? this.adminPasswordHash,
         photographerName: photographerName ?? this.photographerName,
         photographerWhatsapp: photographerWhatsapp ?? this.photographerWhatsapp,
         photographerEmail: photographerEmail ?? this.photographerEmail,
         photographerPixKey: photographerPixKey ?? this.photographerPixKey,
+        photographerPaypal: photographerPaypal ?? this.photographerPaypal,
+        paymentProvider: paymentProvider ?? this.paymentProvider,
+        paymentApiBaseUrl: paymentApiBaseUrl ?? this.paymentApiBaseUrl,
+        paymentApiToken: paymentApiToken ?? this.paymentApiToken,
         deliveryHistoryJson: deliveryHistoryJson ?? this.deliveryHistoryJson,
         preferredInputFolder: preferredInputFolder ?? this.preferredInputFolder,
+        pictureCombosJson: pictureCombosJson ?? this.pictureCombosJson,
+        lastSelectedPictureComboId:
+            lastSelectedPictureComboId ?? this.lastSelectedPictureComboId,
       );
   AppSetting copyWithCompanion(AppSettingsCompanion data) {
     return AppSetting(
@@ -2019,6 +2202,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           ? data.solarLargeFontEnabled.value
           : this.solarLargeFontEnabled,
       themeMode: data.themeMode.present ? data.themeMode.value : this.themeMode,
+      accentColorKey: data.accentColorKey.present
+          ? data.accentColorKey.value
+          : this.accentColorKey,
       adminUsername: data.adminUsername.present
           ? data.adminUsername.value
           : this.adminUsername,
@@ -2037,12 +2223,30 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       photographerPixKey: data.photographerPixKey.present
           ? data.photographerPixKey.value
           : this.photographerPixKey,
+      photographerPaypal: data.photographerPaypal.present
+          ? data.photographerPaypal.value
+          : this.photographerPaypal,
+      paymentProvider: data.paymentProvider.present
+          ? data.paymentProvider.value
+          : this.paymentProvider,
+      paymentApiBaseUrl: data.paymentApiBaseUrl.present
+          ? data.paymentApiBaseUrl.value
+          : this.paymentApiBaseUrl,
+      paymentApiToken: data.paymentApiToken.present
+          ? data.paymentApiToken.value
+          : this.paymentApiToken,
       deliveryHistoryJson: data.deliveryHistoryJson.present
           ? data.deliveryHistoryJson.value
           : this.deliveryHistoryJson,
       preferredInputFolder: data.preferredInputFolder.present
           ? data.preferredInputFolder.value
           : this.preferredInputFolder,
+      pictureCombosJson: data.pictureCombosJson.present
+          ? data.pictureCombosJson.value
+          : this.pictureCombosJson,
+      lastSelectedPictureComboId: data.lastSelectedPictureComboId.present
+          ? data.lastSelectedPictureComboId.value
+          : this.lastSelectedPictureComboId,
     );
   }
 
@@ -2057,36 +2261,51 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           ..write('highContrastEnabled: $highContrastEnabled, ')
           ..write('solarLargeFontEnabled: $solarLargeFontEnabled, ')
           ..write('themeMode: $themeMode, ')
+          ..write('accentColorKey: $accentColorKey, ')
           ..write('adminUsername: $adminUsername, ')
           ..write('adminPasswordHash: $adminPasswordHash, ')
           ..write('photographerName: $photographerName, ')
           ..write('photographerWhatsapp: $photographerWhatsapp, ')
           ..write('photographerEmail: $photographerEmail, ')
           ..write('photographerPixKey: $photographerPixKey, ')
+          ..write('photographerPaypal: $photographerPaypal, ')
+          ..write('paymentProvider: $paymentProvider, ')
+          ..write('paymentApiBaseUrl: $paymentApiBaseUrl, ')
+          ..write('paymentApiToken: $paymentApiToken, ')
           ..write('deliveryHistoryJson: $deliveryHistoryJson, ')
-          ..write('preferredInputFolder: $preferredInputFolder')
+          ..write('preferredInputFolder: $preferredInputFolder, ')
+          ..write('pictureCombosJson: $pictureCombosJson, ')
+          ..write('lastSelectedPictureComboId: $lastSelectedPictureComboId')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
-      id,
-      language,
-      wifiOnly,
-      accessCodeValidityDays,
-      watermarkConfigJson,
-      highContrastEnabled,
-      solarLargeFontEnabled,
-      themeMode,
-      adminUsername,
-      adminPasswordHash,
-      photographerName,
-      photographerWhatsapp,
-      photographerEmail,
-      photographerPixKey,
-      deliveryHistoryJson,
-      preferredInputFolder);
+  int get hashCode => Object.hashAll([
+        id,
+        language,
+        wifiOnly,
+        accessCodeValidityDays,
+        watermarkConfigJson,
+        highContrastEnabled,
+        solarLargeFontEnabled,
+        themeMode,
+        accentColorKey,
+        adminUsername,
+        adminPasswordHash,
+        photographerName,
+        photographerWhatsapp,
+        photographerEmail,
+        photographerPixKey,
+        photographerPaypal,
+        paymentProvider,
+        paymentApiBaseUrl,
+        paymentApiToken,
+        deliveryHistoryJson,
+        preferredInputFolder,
+        pictureCombosJson,
+        lastSelectedPictureComboId
+      ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2099,14 +2318,21 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           other.highContrastEnabled == this.highContrastEnabled &&
           other.solarLargeFontEnabled == this.solarLargeFontEnabled &&
           other.themeMode == this.themeMode &&
+          other.accentColorKey == this.accentColorKey &&
           other.adminUsername == this.adminUsername &&
           other.adminPasswordHash == this.adminPasswordHash &&
           other.photographerName == this.photographerName &&
           other.photographerWhatsapp == this.photographerWhatsapp &&
           other.photographerEmail == this.photographerEmail &&
           other.photographerPixKey == this.photographerPixKey &&
+          other.photographerPaypal == this.photographerPaypal &&
+          other.paymentProvider == this.paymentProvider &&
+          other.paymentApiBaseUrl == this.paymentApiBaseUrl &&
+          other.paymentApiToken == this.paymentApiToken &&
           other.deliveryHistoryJson == this.deliveryHistoryJson &&
-          other.preferredInputFolder == this.preferredInputFolder);
+          other.preferredInputFolder == this.preferredInputFolder &&
+          other.pictureCombosJson == this.pictureCombosJson &&
+          other.lastSelectedPictureComboId == this.lastSelectedPictureComboId);
 }
 
 class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
@@ -2118,14 +2344,21 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
   final Value<bool> highContrastEnabled;
   final Value<bool> solarLargeFontEnabled;
   final Value<String> themeMode;
+  final Value<String> accentColorKey;
   final Value<String> adminUsername;
   final Value<String> adminPasswordHash;
   final Value<String> photographerName;
   final Value<String> photographerWhatsapp;
   final Value<String> photographerEmail;
   final Value<String> photographerPixKey;
+  final Value<String> photographerPaypal;
+  final Value<String> paymentProvider;
+  final Value<String> paymentApiBaseUrl;
+  final Value<String> paymentApiToken;
   final Value<String> deliveryHistoryJson;
   final Value<String> preferredInputFolder;
+  final Value<String> pictureCombosJson;
+  final Value<String> lastSelectedPictureComboId;
   const AppSettingsCompanion({
     this.id = const Value.absent(),
     this.language = const Value.absent(),
@@ -2135,14 +2368,21 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.highContrastEnabled = const Value.absent(),
     this.solarLargeFontEnabled = const Value.absent(),
     this.themeMode = const Value.absent(),
+    this.accentColorKey = const Value.absent(),
     this.adminUsername = const Value.absent(),
     this.adminPasswordHash = const Value.absent(),
     this.photographerName = const Value.absent(),
     this.photographerWhatsapp = const Value.absent(),
     this.photographerEmail = const Value.absent(),
     this.photographerPixKey = const Value.absent(),
+    this.photographerPaypal = const Value.absent(),
+    this.paymentProvider = const Value.absent(),
+    this.paymentApiBaseUrl = const Value.absent(),
+    this.paymentApiToken = const Value.absent(),
     this.deliveryHistoryJson = const Value.absent(),
     this.preferredInputFolder = const Value.absent(),
+    this.pictureCombosJson = const Value.absent(),
+    this.lastSelectedPictureComboId = const Value.absent(),
   });
   AppSettingsCompanion.insert({
     this.id = const Value.absent(),
@@ -2153,14 +2393,21 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.highContrastEnabled = const Value.absent(),
     this.solarLargeFontEnabled = const Value.absent(),
     this.themeMode = const Value.absent(),
+    this.accentColorKey = const Value.absent(),
     this.adminUsername = const Value.absent(),
     this.adminPasswordHash = const Value.absent(),
     this.photographerName = const Value.absent(),
     this.photographerWhatsapp = const Value.absent(),
     this.photographerEmail = const Value.absent(),
     this.photographerPixKey = const Value.absent(),
+    this.photographerPaypal = const Value.absent(),
+    this.paymentProvider = const Value.absent(),
+    this.paymentApiBaseUrl = const Value.absent(),
+    this.paymentApiToken = const Value.absent(),
     this.deliveryHistoryJson = const Value.absent(),
     this.preferredInputFolder = const Value.absent(),
+    this.pictureCombosJson = const Value.absent(),
+    this.lastSelectedPictureComboId = const Value.absent(),
   });
   static Insertable<AppSetting> custom({
     Expression<int>? id,
@@ -2171,14 +2418,21 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Expression<bool>? highContrastEnabled,
     Expression<bool>? solarLargeFontEnabled,
     Expression<String>? themeMode,
+    Expression<String>? accentColorKey,
     Expression<String>? adminUsername,
     Expression<String>? adminPasswordHash,
     Expression<String>? photographerName,
     Expression<String>? photographerWhatsapp,
     Expression<String>? photographerEmail,
     Expression<String>? photographerPixKey,
+    Expression<String>? photographerPaypal,
+    Expression<String>? paymentProvider,
+    Expression<String>? paymentApiBaseUrl,
+    Expression<String>? paymentApiToken,
     Expression<String>? deliveryHistoryJson,
     Expression<String>? preferredInputFolder,
+    Expression<String>? pictureCombosJson,
+    Expression<String>? lastSelectedPictureComboId,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2193,6 +2447,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       if (solarLargeFontEnabled != null)
         'solar_large_font_enabled': solarLargeFontEnabled,
       if (themeMode != null) 'theme_mode': themeMode,
+      if (accentColorKey != null) 'accent_color_key': accentColorKey,
       if (adminUsername != null) 'admin_username': adminUsername,
       if (adminPasswordHash != null) 'admin_password_hash': adminPasswordHash,
       if (photographerName != null) 'photographer_name': photographerName,
@@ -2201,10 +2456,17 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       if (photographerEmail != null) 'photographer_email': photographerEmail,
       if (photographerPixKey != null)
         'photographer_pix_key': photographerPixKey,
+      if (photographerPaypal != null) 'photographer_paypal': photographerPaypal,
+      if (paymentProvider != null) 'payment_provider': paymentProvider,
+      if (paymentApiBaseUrl != null) 'payment_api_base_url': paymentApiBaseUrl,
+      if (paymentApiToken != null) 'payment_api_token': paymentApiToken,
       if (deliveryHistoryJson != null)
         'delivery_history_json': deliveryHistoryJson,
       if (preferredInputFolder != null)
         'preferred_input_folder': preferredInputFolder,
+      if (pictureCombosJson != null) 'picture_combos_json': pictureCombosJson,
+      if (lastSelectedPictureComboId != null)
+        'last_selected_picture_combo_id': lastSelectedPictureComboId,
     });
   }
 
@@ -2217,14 +2479,21 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       Value<bool>? highContrastEnabled,
       Value<bool>? solarLargeFontEnabled,
       Value<String>? themeMode,
+      Value<String>? accentColorKey,
       Value<String>? adminUsername,
       Value<String>? adminPasswordHash,
       Value<String>? photographerName,
       Value<String>? photographerWhatsapp,
       Value<String>? photographerEmail,
       Value<String>? photographerPixKey,
+      Value<String>? photographerPaypal,
+      Value<String>? paymentProvider,
+      Value<String>? paymentApiBaseUrl,
+      Value<String>? paymentApiToken,
       Value<String>? deliveryHistoryJson,
-      Value<String>? preferredInputFolder}) {
+      Value<String>? preferredInputFolder,
+      Value<String>? pictureCombosJson,
+      Value<String>? lastSelectedPictureComboId}) {
     return AppSettingsCompanion(
       id: id ?? this.id,
       language: language ?? this.language,
@@ -2236,14 +2505,22 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       solarLargeFontEnabled:
           solarLargeFontEnabled ?? this.solarLargeFontEnabled,
       themeMode: themeMode ?? this.themeMode,
+      accentColorKey: accentColorKey ?? this.accentColorKey,
       adminUsername: adminUsername ?? this.adminUsername,
       adminPasswordHash: adminPasswordHash ?? this.adminPasswordHash,
       photographerName: photographerName ?? this.photographerName,
       photographerWhatsapp: photographerWhatsapp ?? this.photographerWhatsapp,
       photographerEmail: photographerEmail ?? this.photographerEmail,
       photographerPixKey: photographerPixKey ?? this.photographerPixKey,
+      photographerPaypal: photographerPaypal ?? this.photographerPaypal,
+      paymentProvider: paymentProvider ?? this.paymentProvider,
+      paymentApiBaseUrl: paymentApiBaseUrl ?? this.paymentApiBaseUrl,
+      paymentApiToken: paymentApiToken ?? this.paymentApiToken,
       deliveryHistoryJson: deliveryHistoryJson ?? this.deliveryHistoryJson,
       preferredInputFolder: preferredInputFolder ?? this.preferredInputFolder,
+      pictureCombosJson: pictureCombosJson ?? this.pictureCombosJson,
+      lastSelectedPictureComboId:
+          lastSelectedPictureComboId ?? this.lastSelectedPictureComboId,
     );
   }
 
@@ -2277,6 +2554,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     if (themeMode.present) {
       map['theme_mode'] = Variable<String>(themeMode.value);
     }
+    if (accentColorKey.present) {
+      map['accent_color_key'] = Variable<String>(accentColorKey.value);
+    }
     if (adminUsername.present) {
       map['admin_username'] = Variable<String>(adminUsername.value);
     }
@@ -2296,6 +2576,18 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     if (photographerPixKey.present) {
       map['photographer_pix_key'] = Variable<String>(photographerPixKey.value);
     }
+    if (photographerPaypal.present) {
+      map['photographer_paypal'] = Variable<String>(photographerPaypal.value);
+    }
+    if (paymentProvider.present) {
+      map['payment_provider'] = Variable<String>(paymentProvider.value);
+    }
+    if (paymentApiBaseUrl.present) {
+      map['payment_api_base_url'] = Variable<String>(paymentApiBaseUrl.value);
+    }
+    if (paymentApiToken.present) {
+      map['payment_api_token'] = Variable<String>(paymentApiToken.value);
+    }
     if (deliveryHistoryJson.present) {
       map['delivery_history_json'] =
           Variable<String>(deliveryHistoryJson.value);
@@ -2303,6 +2595,13 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     if (preferredInputFolder.present) {
       map['preferred_input_folder'] =
           Variable<String>(preferredInputFolder.value);
+    }
+    if (pictureCombosJson.present) {
+      map['picture_combos_json'] = Variable<String>(pictureCombosJson.value);
+    }
+    if (lastSelectedPictureComboId.present) {
+      map['last_selected_picture_combo_id'] =
+          Variable<String>(lastSelectedPictureComboId.value);
     }
     return map;
   }
@@ -2318,14 +2617,21 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
           ..write('highContrastEnabled: $highContrastEnabled, ')
           ..write('solarLargeFontEnabled: $solarLargeFontEnabled, ')
           ..write('themeMode: $themeMode, ')
+          ..write('accentColorKey: $accentColorKey, ')
           ..write('adminUsername: $adminUsername, ')
           ..write('adminPasswordHash: $adminPasswordHash, ')
           ..write('photographerName: $photographerName, ')
           ..write('photographerWhatsapp: $photographerWhatsapp, ')
           ..write('photographerEmail: $photographerEmail, ')
           ..write('photographerPixKey: $photographerPixKey, ')
+          ..write('photographerPaypal: $photographerPaypal, ')
+          ..write('paymentProvider: $paymentProvider, ')
+          ..write('paymentApiBaseUrl: $paymentApiBaseUrl, ')
+          ..write('paymentApiToken: $paymentApiToken, ')
           ..write('deliveryHistoryJson: $deliveryHistoryJson, ')
-          ..write('preferredInputFolder: $preferredInputFolder')
+          ..write('preferredInputFolder: $preferredInputFolder, ')
+          ..write('pictureCombosJson: $pictureCombosJson, ')
+          ..write('lastSelectedPictureComboId: $lastSelectedPictureComboId')
           ..write(')'))
         .toString();
   }
@@ -3961,14 +4267,21 @@ typedef $$AppSettingsTableCreateCompanionBuilder = AppSettingsCompanion
   Value<bool> highContrastEnabled,
   Value<bool> solarLargeFontEnabled,
   Value<String> themeMode,
+  Value<String> accentColorKey,
   Value<String> adminUsername,
   Value<String> adminPasswordHash,
   Value<String> photographerName,
   Value<String> photographerWhatsapp,
   Value<String> photographerEmail,
   Value<String> photographerPixKey,
+  Value<String> photographerPaypal,
+  Value<String> paymentProvider,
+  Value<String> paymentApiBaseUrl,
+  Value<String> paymentApiToken,
   Value<String> deliveryHistoryJson,
   Value<String> preferredInputFolder,
+  Value<String> pictureCombosJson,
+  Value<String> lastSelectedPictureComboId,
 });
 typedef $$AppSettingsTableUpdateCompanionBuilder = AppSettingsCompanion
     Function({
@@ -3980,14 +4293,21 @@ typedef $$AppSettingsTableUpdateCompanionBuilder = AppSettingsCompanion
   Value<bool> highContrastEnabled,
   Value<bool> solarLargeFontEnabled,
   Value<String> themeMode,
+  Value<String> accentColorKey,
   Value<String> adminUsername,
   Value<String> adminPasswordHash,
   Value<String> photographerName,
   Value<String> photographerWhatsapp,
   Value<String> photographerEmail,
   Value<String> photographerPixKey,
+  Value<String> photographerPaypal,
+  Value<String> paymentProvider,
+  Value<String> paymentApiBaseUrl,
+  Value<String> paymentApiToken,
   Value<String> deliveryHistoryJson,
   Value<String> preferredInputFolder,
+  Value<String> pictureCombosJson,
+  Value<String> lastSelectedPictureComboId,
 });
 
 class $$AppSettingsTableFilterComposer
@@ -4027,6 +4347,10 @@ class $$AppSettingsTableFilterComposer
   ColumnFilters<String> get themeMode => $composableBuilder(
       column: $table.themeMode, builder: (column) => ColumnFilters(column));
 
+  ColumnFilters<String> get accentColorKey => $composableBuilder(
+      column: $table.accentColorKey,
+      builder: (column) => ColumnFilters(column));
+
   ColumnFilters<String> get adminUsername => $composableBuilder(
       column: $table.adminUsername, builder: (column) => ColumnFilters(column));
 
@@ -4050,12 +4374,36 @@ class $$AppSettingsTableFilterComposer
       column: $table.photographerPixKey,
       builder: (column) => ColumnFilters(column));
 
+  ColumnFilters<String> get photographerPaypal => $composableBuilder(
+      column: $table.photographerPaypal,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get paymentProvider => $composableBuilder(
+      column: $table.paymentProvider,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get paymentApiBaseUrl => $composableBuilder(
+      column: $table.paymentApiBaseUrl,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get paymentApiToken => $composableBuilder(
+      column: $table.paymentApiToken,
+      builder: (column) => ColumnFilters(column));
+
   ColumnFilters<String> get deliveryHistoryJson => $composableBuilder(
       column: $table.deliveryHistoryJson,
       builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get preferredInputFolder => $composableBuilder(
       column: $table.preferredInputFolder,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get pictureCombosJson => $composableBuilder(
+      column: $table.pictureCombosJson,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get lastSelectedPictureComboId => $composableBuilder(
+      column: $table.lastSelectedPictureComboId,
       builder: (column) => ColumnFilters(column));
 }
 
@@ -4096,6 +4444,10 @@ class $$AppSettingsTableOrderingComposer
   ColumnOrderings<String> get themeMode => $composableBuilder(
       column: $table.themeMode, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get accentColorKey => $composableBuilder(
+      column: $table.accentColorKey,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get adminUsername => $composableBuilder(
       column: $table.adminUsername,
       builder: (column) => ColumnOrderings(column));
@@ -4120,12 +4472,36 @@ class $$AppSettingsTableOrderingComposer
       column: $table.photographerPixKey,
       builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get photographerPaypal => $composableBuilder(
+      column: $table.photographerPaypal,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get paymentProvider => $composableBuilder(
+      column: $table.paymentProvider,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get paymentApiBaseUrl => $composableBuilder(
+      column: $table.paymentApiBaseUrl,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get paymentApiToken => $composableBuilder(
+      column: $table.paymentApiToken,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get deliveryHistoryJson => $composableBuilder(
       column: $table.deliveryHistoryJson,
       builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<String> get preferredInputFolder => $composableBuilder(
       column: $table.preferredInputFolder,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get pictureCombosJson => $composableBuilder(
+      column: $table.pictureCombosJson,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get lastSelectedPictureComboId => $composableBuilder(
+      column: $table.lastSelectedPictureComboId,
       builder: (column) => ColumnOrderings(column));
 }
 
@@ -4162,6 +4538,9 @@ class $$AppSettingsTableAnnotationComposer
   GeneratedColumn<String> get themeMode =>
       $composableBuilder(column: $table.themeMode, builder: (column) => column);
 
+  GeneratedColumn<String> get accentColorKey => $composableBuilder(
+      column: $table.accentColorKey, builder: (column) => column);
+
   GeneratedColumn<String> get adminUsername => $composableBuilder(
       column: $table.adminUsername, builder: (column) => column);
 
@@ -4180,11 +4559,29 @@ class $$AppSettingsTableAnnotationComposer
   GeneratedColumn<String> get photographerPixKey => $composableBuilder(
       column: $table.photographerPixKey, builder: (column) => column);
 
+  GeneratedColumn<String> get photographerPaypal => $composableBuilder(
+      column: $table.photographerPaypal, builder: (column) => column);
+
+  GeneratedColumn<String> get paymentProvider => $composableBuilder(
+      column: $table.paymentProvider, builder: (column) => column);
+
+  GeneratedColumn<String> get paymentApiBaseUrl => $composableBuilder(
+      column: $table.paymentApiBaseUrl, builder: (column) => column);
+
+  GeneratedColumn<String> get paymentApiToken => $composableBuilder(
+      column: $table.paymentApiToken, builder: (column) => column);
+
   GeneratedColumn<String> get deliveryHistoryJson => $composableBuilder(
       column: $table.deliveryHistoryJson, builder: (column) => column);
 
   GeneratedColumn<String> get preferredInputFolder => $composableBuilder(
       column: $table.preferredInputFolder, builder: (column) => column);
+
+  GeneratedColumn<String> get pictureCombosJson => $composableBuilder(
+      column: $table.pictureCombosJson, builder: (column) => column);
+
+  GeneratedColumn<String> get lastSelectedPictureComboId => $composableBuilder(
+      column: $table.lastSelectedPictureComboId, builder: (column) => column);
 }
 
 class $$AppSettingsTableTableManager extends RootTableManager<
@@ -4218,14 +4615,21 @@ class $$AppSettingsTableTableManager extends RootTableManager<
             Value<bool> highContrastEnabled = const Value.absent(),
             Value<bool> solarLargeFontEnabled = const Value.absent(),
             Value<String> themeMode = const Value.absent(),
+            Value<String> accentColorKey = const Value.absent(),
             Value<String> adminUsername = const Value.absent(),
             Value<String> adminPasswordHash = const Value.absent(),
             Value<String> photographerName = const Value.absent(),
             Value<String> photographerWhatsapp = const Value.absent(),
             Value<String> photographerEmail = const Value.absent(),
             Value<String> photographerPixKey = const Value.absent(),
+            Value<String> photographerPaypal = const Value.absent(),
+            Value<String> paymentProvider = const Value.absent(),
+            Value<String> paymentApiBaseUrl = const Value.absent(),
+            Value<String> paymentApiToken = const Value.absent(),
             Value<String> deliveryHistoryJson = const Value.absent(),
             Value<String> preferredInputFolder = const Value.absent(),
+            Value<String> pictureCombosJson = const Value.absent(),
+            Value<String> lastSelectedPictureComboId = const Value.absent(),
           }) =>
               AppSettingsCompanion(
             id: id,
@@ -4236,14 +4640,21 @@ class $$AppSettingsTableTableManager extends RootTableManager<
             highContrastEnabled: highContrastEnabled,
             solarLargeFontEnabled: solarLargeFontEnabled,
             themeMode: themeMode,
+            accentColorKey: accentColorKey,
             adminUsername: adminUsername,
             adminPasswordHash: adminPasswordHash,
             photographerName: photographerName,
             photographerWhatsapp: photographerWhatsapp,
             photographerEmail: photographerEmail,
             photographerPixKey: photographerPixKey,
+            photographerPaypal: photographerPaypal,
+            paymentProvider: paymentProvider,
+            paymentApiBaseUrl: paymentApiBaseUrl,
+            paymentApiToken: paymentApiToken,
             deliveryHistoryJson: deliveryHistoryJson,
             preferredInputFolder: preferredInputFolder,
+            pictureCombosJson: pictureCombosJson,
+            lastSelectedPictureComboId: lastSelectedPictureComboId,
           ),
           createCompanionCallback: ({
             Value<int> id = const Value.absent(),
@@ -4254,14 +4665,21 @@ class $$AppSettingsTableTableManager extends RootTableManager<
             Value<bool> highContrastEnabled = const Value.absent(),
             Value<bool> solarLargeFontEnabled = const Value.absent(),
             Value<String> themeMode = const Value.absent(),
+            Value<String> accentColorKey = const Value.absent(),
             Value<String> adminUsername = const Value.absent(),
             Value<String> adminPasswordHash = const Value.absent(),
             Value<String> photographerName = const Value.absent(),
             Value<String> photographerWhatsapp = const Value.absent(),
             Value<String> photographerEmail = const Value.absent(),
             Value<String> photographerPixKey = const Value.absent(),
+            Value<String> photographerPaypal = const Value.absent(),
+            Value<String> paymentProvider = const Value.absent(),
+            Value<String> paymentApiBaseUrl = const Value.absent(),
+            Value<String> paymentApiToken = const Value.absent(),
             Value<String> deliveryHistoryJson = const Value.absent(),
             Value<String> preferredInputFolder = const Value.absent(),
+            Value<String> pictureCombosJson = const Value.absent(),
+            Value<String> lastSelectedPictureComboId = const Value.absent(),
           }) =>
               AppSettingsCompanion.insert(
             id: id,
@@ -4272,14 +4690,21 @@ class $$AppSettingsTableTableManager extends RootTableManager<
             highContrastEnabled: highContrastEnabled,
             solarLargeFontEnabled: solarLargeFontEnabled,
             themeMode: themeMode,
+            accentColorKey: accentColorKey,
             adminUsername: adminUsername,
             adminPasswordHash: adminPasswordHash,
             photographerName: photographerName,
             photographerWhatsapp: photographerWhatsapp,
             photographerEmail: photographerEmail,
             photographerPixKey: photographerPixKey,
+            photographerPaypal: photographerPaypal,
+            paymentProvider: paymentProvider,
+            paymentApiBaseUrl: paymentApiBaseUrl,
+            paymentApiToken: paymentApiToken,
             deliveryHistoryJson: deliveryHistoryJson,
             preferredInputFolder: preferredInputFolder,
+            pictureCombosJson: pictureCombosJson,
+            lastSelectedPictureComboId: lastSelectedPictureComboId,
           ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

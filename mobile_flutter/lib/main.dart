@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 
 import 'package:clickpix_ramon/core/i18n/app_localizations.dart';
 import 'package:clickpix_ramon/core/i18n/ui_text.dart';
@@ -6,13 +6,140 @@ import 'package:clickpix_ramon/core/settings/app_settings_store.dart';
 import 'package:clickpix_ramon/data/local/app_database.dart';
 import 'package:clickpix_ramon/data/services/photo_ingestion_service.dart';
 import 'package:clickpix_ramon/data/services/upload_worker.dart';
+import 'package:clickpix_ramon/presentation/manage_contacts_page.dart';
 import 'package:clickpix_ramon/presentation/recent_photos_page.dart';
 import 'package:drift/drift.dart' show LazyDatabase;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+
+const List<String> _accentFamilies = [
+  'blue',
+  'green',
+  'orange',
+  'gray',
+  'red',
+  'brown',
+];
+
+const Map<String, Color> _accentTokenToColor = {
+  'blue_light': Color(0xFF93C5FD),
+  'blue_mid': Color(0xFF1D4ED8),
+  'blue_dark': Color(0xFF1E3A8A),
+  'green_light': Color(0xFF86EFAC),
+  'green_mid': Color(0xFF15803D),
+  'green_dark': Color(0xFF14532D),
+  'orange_light': Color(0xFFFDBA74),
+  'orange_mid': Color(0xFFEA580C),
+  'orange_dark': Color(0xFF9A3412),
+  'gray_light': Color(0xFFD1D5DB),
+  'gray_mid': Color(0xFF6B7280),
+  'gray_dark': Color(0xFF374151),
+  'red_light': Color(0xFFFCA5A5),
+  'red_mid': Color(0xFFDC2626),
+  'red_dark': Color(0xFF7F1D1D),
+  'brown_light': Color(0xFFD2B48C),
+  'brown_mid': Color(0xFF8B5E3C),
+  'brown_dark': Color(0xFF4E342E),
+};
+
+String _accentFamilyFromKey(String key) {
+  final parts = key.split('_');
+  final family = parts.isNotEmpty ? parts.first : '';
+  return _accentFamilies.contains(family) ? family : 'blue';
+}
+
+String _accentToken(String family) {
+  final normalizedFamily = _accentFamilies.contains(family) ? family : 'blue';
+  return '${normalizedFamily}_mid';
+}
+
+Color _accentColorFromKey(String key) {
+  return _accentTokenToColor[key] ??
+      _accentTokenToColor[AppSettingsStore.defaultAccentColorKey]!;
+}
+
+String _accentFamilyLabel(
+  BuildContext context,
+  String family,
+) {
+  switch (family) {
+    case 'gray':
+      return tr(context, pt: 'Cinza', es: 'Gris', en: 'Gray');
+    case 'red':
+      return tr(context, pt: 'Vermelho', es: 'Rojo', en: 'Red');
+    case 'brown':
+      return tr(context, pt: 'Marrom', es: 'Marron', en: 'Brown');
+    case 'blue':
+      return tr(context, pt: 'Azul', es: 'Azul', en: 'Blue');
+    case 'green':
+      return tr(context, pt: 'Verde', es: 'Verde', en: 'Green');
+    case 'orange':
+      return tr(context, pt: 'Laranja', es: 'Naranja', en: 'Orange');
+    default:
+      return tr(context, pt: 'Azul', es: 'Azul', en: 'Blue');
+  }
+}
+
+const Map<PaymentProvider, String> _paymentProviderDefaultApiBaseUrls = {
+  PaymentProvider.bancoDoBrasil: 'https://seu-backend-pix.example.com/bb',
+  PaymentProvider.itau: 'https://seu-backend-pix.example.com/itau',
+  PaymentProvider.bradesco: 'https://seu-backend-pix.example.com/bradesco',
+  PaymentProvider.santander: 'https://seu-backend-pix.example.com/santander',
+  PaymentProvider.caixa: 'https://seu-backend-pix.example.com/caixa',
+  PaymentProvider.inter: 'https://seu-backend-pix.example.com/inter',
+  PaymentProvider.nubank: 'https://seu-backend-pix.example.com/nubank',
+  PaymentProvider.sicredi: 'https://seu-backend-pix.example.com/sicredi',
+  PaymentProvider.sicoob: 'https://seu-backend-pix.example.com/sicoob',
+  PaymentProvider.c6Bank: 'https://seu-backend-pix.example.com/c6',
+  PaymentProvider.mercadoPago:
+      'https://seu-backend-pix.example.com/mercado-pago',
+  PaymentProvider.outro: 'https://seu-backend-pix.example.com/outro',
+};
+
+String _paymentProviderLabel(BuildContext context, PaymentProvider provider) {
+  switch (provider) {
+    case PaymentProvider.manual:
+      return tr(
+        context,
+        pt: 'Manual (QR local)',
+        es: 'Manual (QR local)',
+        en: 'Manual (local QR)',
+      );
+    case PaymentProvider.bancoDoBrasil:
+      return 'Banco do Brasil';
+    case PaymentProvider.itau:
+      return 'Itaú';
+    case PaymentProvider.bradesco:
+      return 'Bradesco';
+    case PaymentProvider.santander:
+      return 'Santander';
+    case PaymentProvider.caixa:
+      return 'Caixa';
+    case PaymentProvider.inter:
+      return 'Inter';
+    case PaymentProvider.nubank:
+      return 'Nubank';
+    case PaymentProvider.sicredi:
+      return 'Sicredi';
+    case PaymentProvider.sicoob:
+      return 'Sicoob';
+    case PaymentProvider.c6Bank:
+      return 'C6 Bank';
+    case PaymentProvider.mercadoPago:
+      return 'Mercado Pago';
+    case PaymentProvider.outro:
+      return tr(
+        context,
+        pt: 'Outro',
+        es: 'Otro',
+        en: 'Other',
+      );
+  }
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -110,16 +237,12 @@ class _ClickPixAppState extends State<ClickPixApp> {
   }
 
   ThemeData _buildTheme(Brightness brightness) {
-    final baseScheme = ColorScheme.fromSeed(
-      seedColor: const Color(0xFF0F766E),
+    final scheme = ColorScheme.fromSeed(
+      seedColor: _accentColorFromKey(_visualSettings.accentColorKey),
       brightness: brightness,
+      // Keep the selected accent family/shade even in high-contrast mode.
+      contrastLevel: _visualSettings.highContrastEnabled ? 1.0 : 0.0,
     );
-
-    final scheme = _visualSettings.highContrastEnabled
-        ? (brightness == Brightness.dark
-            ? const ColorScheme.highContrastDark()
-            : const ColorScheme.highContrastLight())
-        : baseScheme;
 
     final isSolar = _visualSettings.solarLargeFontEnabled;
 
@@ -778,12 +901,17 @@ class DashboardPage extends StatelessWidget {
               : width >= 720
                   ? 2
                   : 1;
-          final scaledHeight = MediaQuery.textScalerOf(context).scale(210);
-          final tileHeight = scaledHeight < 210
-              ? 210.0
-              : scaledHeight > 280
-                  ? 280.0
-                  : scaledHeight;
+          const baseTileHeight = 210.0;
+          const minTileHeight = baseTileHeight * 0.9;
+          const maxTileHeight = 280.0 * 0.9;
+          final scaledHeight =
+              MediaQuery.textScalerOf(context).scale(baseTileHeight) * 0.9;
+          final tileHeight = scaledHeight
+              .clamp(
+                minTileHeight,
+                maxTileHeight,
+              )
+              .toDouble();
 
           return Padding(
             padding: const EdgeInsets.all(16),
@@ -874,6 +1002,30 @@ class DashboardPage extends StatelessWidget {
                   },
                 ),
                 _DashboardCardButton(
+                  icon: Icons.contacts,
+                  title: tr(
+                    context,
+                    pt: 'Gerir contatos',
+                    es: 'Gestionar contactos',
+                    en: 'Manage contacts',
+                  ),
+                  subtitle: tr(
+                    context,
+                    pt: 'Ver, editar, adicionar, remover e exportar contatos.',
+                    es: 'Ver, editar, agregar, eliminar y exportar contactos.',
+                    en: 'View, edit, add, delete and export contacts.',
+                  ),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => ManageContactsPage(
+                          database: database,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                _DashboardCardButton(
                   icon: Icons.query_stats,
                   title: tr(
                     context,
@@ -941,7 +1093,11 @@ class _DashboardCardButton extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Expanded(
-                child: Text(subtitle),
+                child: Text(
+                  subtitle,
+                  maxLines: 4,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
@@ -969,6 +1125,7 @@ class _QuickServiceModulePageState extends State<QuickServiceModulePage> {
   late final PhotoIngestionService _ingestionService;
   final TextEditingController _folderController = TextEditingController();
   bool _ingesting = false;
+  int _recentPhotosRefreshToken = 0;
 
   @override
   void initState() {
@@ -1084,9 +1241,9 @@ class _QuickServiceModulePageState extends State<QuickServiceModulePage> {
                     Text(
                       tr(
                         context,
-                        pt: 'Pagamentos suportados: Pix, PayPal, cartão de crédito e cartão de débito.',
-                        es: 'Pagos soportados: Pix, PayPal, tarjeta de crédito y tarjeta de débito.',
-                        en: 'Supported payments: Pix, PayPal, credit card and debit card.',
+                        pt: 'Pagamentos suportados: Pix e PayPal.',
+                        es: 'Pagos soportados: Pix y PayPal.',
+                        en: 'Supported payments: Pix and PayPal.',
                       ),
                       style: TextStyle(fontSize: 12),
                     ),
@@ -1096,6 +1253,7 @@ class _QuickServiceModulePageState extends State<QuickServiceModulePage> {
             ),
             const SizedBox(height: 16),
             RecentPhotosPage(
+              key: ValueKey('quick_recent_$_recentPhotosRefreshToken'),
               database: widget.database,
               settingsStore: widget.settingsStore,
               requirePayment: true,
@@ -1112,6 +1270,22 @@ class _QuickServiceModulePageState extends State<QuickServiceModulePage> {
       return;
     }
 
+    if (Platform.isAndroid && RegExp(r'^[A-Za-z]:\\').hasMatch(folderPath)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            tr(
+              context,
+              pt: 'Caminho do Windows detectado. No Android, use caminho local do dispositivo ou "Selecionar fotos manualmente".',
+              es: 'Se detectó una ruta de Windows. En Android, usa una ruta local del dispositivo o "Seleccionar fotos manualmente".',
+              en: 'Windows path detected. On Android, use a local device path or "Select photos manually".',
+            ),
+          ),
+        ),
+      );
+      return;
+    }
+
     setState(() => _ingesting = true);
     final result = await _ingestionService.ingestFromFolder(
       directory: Directory(folderPath),
@@ -1120,16 +1294,28 @@ class _QuickServiceModulePageState extends State<QuickServiceModulePage> {
     if (!mounted) {
       return;
     }
-    setState(() => _ingesting = false);
+    setState(() {
+      _ingesting = false;
+      if (result.insertedCount > 0) {
+        _recentPhotosRefreshToken++;
+      }
+    });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          tr(
-            context,
-            pt: '${result.insertedCount} foto(s) importada(s) da pasta.',
-            es: '${result.insertedCount} foto(s) importada(s) desde la carpeta.',
-            en: '${result.insertedCount} photo(s) imported from the folder.',
-          ),
+          result.insertedCount > 0
+              ? tr(
+                  context,
+                  pt: '${result.insertedCount} foto(s) importada(s) da pasta.',
+                  es: '${result.insertedCount} foto(s) importada(s) desde la carpeta.',
+                  en: '${result.insertedCount} photo(s) imported from the folder.',
+                )
+              : tr(
+                  context,
+                  pt: 'Nenhuma foto importada. Verifique se a pasta está no dispositivo Android e contém arquivos suportados (jpg, jpeg, png, heic, webp).',
+                  es: 'No se importaron fotos. Verifica si la carpeta está en el dispositivo Android y contiene archivos soportados (jpg, jpeg, png, heic, webp).',
+                  en: 'No photos were imported. Check if the folder is on the Android device and has supported files (jpg, jpeg, png, heic, webp).',
+                ),
         ),
       ),
     );
@@ -1141,7 +1327,12 @@ class _QuickServiceModulePageState extends State<QuickServiceModulePage> {
     if (!mounted) {
       return;
     }
-    setState(() => _ingesting = false);
+    setState(() {
+      _ingesting = false;
+      if (result.insertedCount > 0) {
+        _recentPhotosRefreshToken++;
+      }
+    });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -1315,11 +1506,18 @@ class _AppConfigurationPageState extends State<AppConfigurationPage> {
   final _photographerWhatsappController = TextEditingController();
   final _photographerEmailController = TextEditingController();
   final _pixKeyController = TextEditingController();
+  final _paypalController = TextEditingController();
+  final _paymentApiBaseUrlController = TextEditingController();
+  final _paymentApiTokenController = TextEditingController();
   final _adminUserController = TextEditingController();
   final _adminPasswordController = TextEditingController();
   bool _wifiOnly = false;
   int _accessCodeDays = 7;
+  List<PictureComboPricing> _pictureCombos = const [];
+  PaymentProvider _paymentProvider = PaymentProvider.manual;
   late AppVisualSettings _visualSettings;
+  String get _currentAccentFamily =>
+      _accentFamilyFromKey(_visualSettings.accentColorKey);
 
   @override
   void initState() {
@@ -1334,6 +1532,9 @@ class _AppConfigurationPageState extends State<AppConfigurationPage> {
     _photographerWhatsappController.dispose();
     _photographerEmailController.dispose();
     _pixKeyController.dispose();
+    _paypalController.dispose();
+    _paymentApiBaseUrlController.dispose();
+    _paymentApiTokenController.dispose();
     _adminUserController.dispose();
     _adminPasswordController.dispose();
     super.dispose();
@@ -1343,6 +1544,9 @@ class _AppConfigurationPageState extends State<AppConfigurationPage> {
     final businessProfile = await widget.settingsStore.loadBusinessProfile();
     final credentials = await widget.settingsStore.loadAdminCredentials();
     final delivery = await widget.settingsStore.loadDeliverySettings();
+    final pictureCombos = await widget.settingsStore.loadPictureCombos();
+    final paymentIntegration =
+        await widget.settingsStore.loadPaymentIntegrationSettings();
     if (!mounted) {
       return;
     }
@@ -1352,10 +1556,35 @@ class _AppConfigurationPageState extends State<AppConfigurationPage> {
           businessProfile.photographerWhatsapp;
       _photographerEmailController.text = businessProfile.photographerEmail;
       _pixKeyController.text = businessProfile.photographerPixKey;
+      _paypalController.text = businessProfile.photographerPaypal;
       _adminUserController.text = credentials.username;
       _wifiOnly = delivery.wifiOnly;
       _accessCodeDays = delivery.accessCodeValidityDays;
+      _pictureCombos = pictureCombos;
+      _paymentProvider = paymentIntegration.provider;
+      _paymentApiBaseUrlController.text = paymentIntegration.apiBaseUrl;
+      _paymentApiTokenController.text = paymentIntegration.apiToken;
     });
+  }
+
+  Future<void> _updateAccentColor({
+    String? family,
+  }) async {
+    final nextKey = _accentToken(family ?? _currentAccentFamily);
+    final next = _visualSettings.copyWith(accentColorKey: nextKey);
+    setState(() => _visualSettings = next);
+    await widget.onVisualSettingsChanged(next);
+  }
+
+  void _onPaymentProviderChanged(PaymentProvider provider) {
+    final currentUrl = _paymentApiBaseUrlController.text.trim();
+    final currentSuggestion = _paymentProviderDefaultApiBaseUrls[_paymentProvider];
+    final nextSuggestion = _paymentProviderDefaultApiBaseUrls[provider];
+    if (currentUrl.isEmpty ||
+        (currentSuggestion != null && currentUrl == currentSuggestion)) {
+      _paymentApiBaseUrlController.text = nextSuggestion ?? '';
+    }
+    setState(() => _paymentProvider = provider);
   }
 
   @override
@@ -1443,6 +1672,19 @@ class _AppConfigurationPageState extends State<AppConfigurationPage> {
                       ),
                     ),
                     const SizedBox(height: 8),
+                    TextField(
+                      controller: _paypalController,
+                      decoration: InputDecoration(
+                        border: const OutlineInputBorder(),
+                        labelText: tr(
+                          context,
+                          pt: 'Conta PayPal (e-mail/usuário)',
+                          es: 'Cuenta PayPal (correo/usuario)',
+                          en: 'PayPal account (email/username)',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton(
@@ -1453,6 +1695,115 @@ class _AppConfigurationPageState extends State<AppConfigurationPage> {
                             pt: 'Salvar perfil',
                             es: 'Guardar perfil',
                             en: 'Save profile',
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                        tr(
+                          context,
+                          pt: 'Integração Pix por banco',
+                          es: 'Integración Pix por banco',
+                          en: 'Bank Pix integration',
+                        ),
+                        style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<PaymentProvider>(
+                      value: _paymentProvider,
+                      decoration: InputDecoration(
+                        border: const OutlineInputBorder(),
+                        labelText: tr(
+                          context,
+                          pt: 'Banco/provedor',
+                          es: 'Banco/proveedor',
+                          en: 'Bank/provider',
+                        ),
+                      ),
+                      items: PaymentProvider.values
+                          .map(
+                            (provider) => DropdownMenuItem(
+                              value: provider,
+                              child: Text(_paymentProviderLabel(context, provider)),
+                            ),
+                          )
+                          .toList(growable: false),
+                      onChanged: (value) {
+                        if (value == null) {
+                          return;
+                        }
+                        _onPaymentProviderChanged(value);
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _paymentApiBaseUrlController,
+                      enabled: _paymentProvider != PaymentProvider.manual,
+                      decoration: InputDecoration(
+                        border: const OutlineInputBorder(),
+                        labelText: tr(
+                          context,
+                          pt: 'URL base da API Pix',
+                          es: 'URL base de la API Pix',
+                          en: 'Pix API base URL',
+                        ),
+                        helperText: _paymentProvider == PaymentProvider.manual
+                            ? tr(
+                                context,
+                                pt: 'Modo manual usa QR local sem consulta de status.',
+                                es: 'Modo manual usa QR local sin consulta de estado.',
+                                en: 'Manual mode uses local QR without status query.',
+                              )
+                            : _paymentProvider == PaymentProvider.outro
+                                ? tr(
+                                    context,
+                                    pt: 'Em "Outro", informe URL e token do seu backend para criar cobrança Pix e confirmar pagamento em tempo real.',
+                                    es: 'En "Otro", informa URL y token de tu backend para crear el cobro Pix y confirmar el pago en tiempo real.',
+                                    en: 'In "Other", provide backend URL and token to create Pix charges and confirm payment in real time.',
+                                  )
+                                : tr(
+                                    context,
+                                    pt: 'Use seu backend (não exponha credenciais bancárias no app).',
+                                    es: 'Usa tu backend (no expongas credenciales bancarias en la app).',
+                                    en: 'Use your backend (do not expose banking credentials in-app).',
+                                  ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _paymentApiTokenController,
+                      enabled: _paymentProvider != PaymentProvider.manual,
+                      decoration: InputDecoration(
+                        border: const OutlineInputBorder(),
+                        labelText: tr(
+                          context,
+                          pt: 'Token da API',
+                          es: 'Token de la API',
+                          en: 'API token',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: _savePaymentIntegration,
+                        child: Text(
+                          tr(
+                            context,
+                            pt: 'Salvar integração Pix',
+                            es: 'Guardar integración Pix',
+                            en: 'Save Pix integration',
                           ),
                         ),
                       ),
@@ -1620,6 +1971,35 @@ class _AppConfigurationPageState extends State<AppConfigurationPage> {
                         ],
                       ),
                     ),
+                    const SizedBox(height: 6),
+                    Text(
+                      tr(
+                        context,
+                        pt: 'Cor principal',
+                        es: 'Color principal',
+                        en: 'Main color',
+                      ),
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _accentFamilies
+                          .map(
+                            (family) => ChoiceChip(
+                              label: Text(_accentFamilyLabel(context, family)),
+                              selected: _currentAccentFamily == family,
+                              onSelected: (selected) {
+                                if (!selected) {
+                                  return;
+                                }
+                                _updateAccentColor(family: family);
+                              },
+                            ),
+                          )
+                          .toList(growable: false),
+                    ),
                     ListTile(
                       title: Text(
                         tr(
@@ -1723,10 +2103,176 @@ class _AppConfigurationPageState extends State<AppConfigurationPage> {
                 ),
               ),
             ),
+            const SizedBox(height: 16),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      tr(
+                        context,
+                        pt: 'Combos de fotos',
+                        es: 'Combos de fotos',
+                        en: 'Photo combos',
+                      ),
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      tr(
+                        context,
+                        pt: 'Configure regras de preco por quantidade. Exemplo: a partir de 5 fotos, cada foto custa R\$ 5,00.',
+                        es: 'Configura reglas de precio por cantidad. Ejemplo: desde 5 fotos, cada foto cuesta R\$ 5,00.',
+                        en: 'Configure quantity-based pricing rules. Example: from 5 photos, each photo costs R\$ 5.00.',
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (_pictureCombos.isEmpty)
+                      Text(
+                        tr(
+                          context,
+                          pt: 'Nenhum combo cadastrado.',
+                          es: 'No hay combos registrados.',
+                          en: 'No combos configured.',
+                        ),
+                      )
+                    else
+                      ..._pictureCombos.map(
+                        (combo) => ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(combo.name),
+                          subtitle: Text(
+                            tr(
+                              context,
+                              pt: 'A partir de ${combo.minimumPhotos} foto(s): ${_formatCurrency(combo.unitPriceCents)} por foto',
+                              es: 'Desde ${combo.minimumPhotos} foto(s): ${_formatCurrency(combo.unitPriceCents)} por foto',
+                              en: 'From ${combo.minimumPhotos} photo(s): ${_formatCurrency(combo.unitPriceCents)} per photo',
+                            ),
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                onPressed: () => _upsertPictureCombo(combo),
+                                icon: const Icon(Icons.edit),
+                                tooltip: tr(
+                                  context,
+                                  pt: 'Editar',
+                                  es: 'Editar',
+                                  en: 'Edit',
+                                ),
+                              ),
+                              IconButton(
+                                onPressed: () => _removePictureCombo(combo.id),
+                                icon: const Icon(Icons.delete_outline),
+                                tooltip: tr(
+                                  context,
+                                  pt: 'Remover',
+                                  es: 'Eliminar',
+                                  en: 'Delete',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () => _upsertPictureCombo(),
+                        icon: const Icon(Icons.add_circle_outline),
+                        label: Text(
+                          tr(
+                            context,
+                            pt: 'Adicionar combo',
+                            es: 'Agregar combo',
+                            en: 'Add combo',
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _upsertPictureCombo([PictureComboPricing? existing]) async {
+    final result = await Navigator.of(context).push<PictureComboPricing>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => _PictureComboEditorPage(
+          existing: existing,
+          nextOrdinal: _pictureCombos.length + 1,
+        ),
+      ),
+    );
+
+    if (!mounted) {
+      return;
+    }
+    if (result == null) {
+      return;
+    }
+
+    final next = [..._pictureCombos];
+    final index = next.indexWhere((combo) => combo.id == result.id);
+    if (index >= 0) {
+      next[index] = result;
+    } else {
+      next.add(result);
+    }
+
+    next.sort((a, b) => a.minimumPhotos.compareTo(b.minimumPhotos));
+    await _persistPictureCombos(next);
+  }
+
+  Future<void> _removePictureCombo(String comboId) async {
+    final next = _pictureCombos
+        .where((combo) => combo.id != comboId)
+        .toList(growable: false);
+    await _persistPictureCombos(next);
+  }
+
+  Future<void> _persistPictureCombos(List<PictureComboPricing> combos) async {
+    await widget.settingsStore.savePictureCombos(combos);
+    final preferredComboId =
+        await widget.settingsStore.loadLastSelectedPictureComboId();
+    if (preferredComboId.isNotEmpty &&
+        !combos.any((combo) => combo.id == preferredComboId)) {
+      await widget.settingsStore.saveLastSelectedPictureComboId(
+        combos.isEmpty ? '' : combos.first.id,
+      );
+    }
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _pictureCombos = combos;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          tr(
+            context,
+            pt: 'Combos atualizados.',
+            es: 'Combos actualizados.',
+            en: 'Combos updated.',
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatCurrency(int cents) {
+    return 'R\$ ${(cents / 100).toStringAsFixed(2)}';
   }
 
   Future<void> _saveBusinessProfile() async {
@@ -1738,6 +2284,7 @@ class _AppConfigurationPageState extends State<AppConfigurationPage> {
         photographerWhatsapp: _photographerWhatsappController.text.trim(),
         photographerEmail: _photographerEmailController.text.trim(),
         photographerPixKey: _pixKeyController.text.trim(),
+        photographerPaypal: _paypalController.text.trim(),
       ),
     );
 
@@ -1753,6 +2300,39 @@ class _AppConfigurationPageState extends State<AppConfigurationPage> {
             es: 'Perfil guardado con éxito.',
             en: 'Profile saved successfully.',
           ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _savePaymentIntegration() async {
+    await widget.settingsStore.savePaymentIntegrationSettings(
+      PaymentIntegrationSettings(
+        provider: _paymentProvider,
+        apiBaseUrl: _paymentApiBaseUrlController.text.trim(),
+        apiToken: _paymentApiTokenController.text.trim(),
+      ),
+    );
+
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          _paymentProvider == PaymentProvider.manual
+              ? tr(
+                  context,
+                  pt: 'Integração Pix em modo manual salva.',
+                  es: 'Integración Pix en modo manual guardada.',
+                  en: 'Manual Pix mode saved.',
+                )
+              : tr(
+                  context,
+                  pt: 'Integração Pix salva. O QR pode usar API e confirmação em tempo real.',
+                  es: 'Integración Pix guardada. El QR puede usar API y confirmación en tiempo real.',
+                  en: 'Pix integration saved. QR can use API and real-time confirmation.',
+                ),
         ),
       ),
     );
@@ -1817,6 +2397,172 @@ class _AppConfigurationPageState extends State<AppConfigurationPage> {
             pt: 'Parâmetros operacionais salvos.',
             es: 'Parámetros operativos guardados.',
             en: 'Operational parameters saved.',
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PictureComboEditorPage extends StatefulWidget {
+  const _PictureComboEditorPage({
+    required this.nextOrdinal,
+    this.existing,
+  });
+
+  final PictureComboPricing? existing;
+  final int nextOrdinal;
+
+  @override
+  State<_PictureComboEditorPage> createState() =>
+      _PictureComboEditorPageState();
+}
+
+class _PictureComboEditorPageState extends State<_PictureComboEditorPage> {
+  late final TextEditingController _nameController;
+  late final TextEditingController _minimumPhotosController;
+  late final TextEditingController _unitPriceController;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(
+      text: widget.existing?.name ?? 'Combo ${widget.nextOrdinal}',
+    );
+    _minimumPhotosController = TextEditingController(
+      text: '${widget.existing?.minimumPhotos ?? 5}',
+    );
+    _unitPriceController = TextEditingController(
+      text: ((widget.existing?.unitPriceCents ?? 500) / 100).toStringAsFixed(2),
+    );
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _minimumPhotosController.dispose();
+    _unitPriceController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final name = _nameController.text.trim();
+    final minimumPhotos =
+        int.tryParse(_minimumPhotosController.text.trim()) ?? 0;
+    final unitPriceCents =
+        _parseCurrencyCentsFromInput(_unitPriceController.text);
+    if (name.isEmpty || minimumPhotos <= 0 || unitPriceCents <= 0) {
+      return;
+    }
+    FocusManager.instance.primaryFocus?.unfocus();
+    final result = PictureComboPricing(
+      id: widget.existing?.id ?? 'combo_${DateTime.now().microsecondsSinceEpoch}',
+      name: name,
+      minimumPhotos: minimumPhotos,
+      unitPriceCents: unitPriceCents,
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      Navigator.of(context).pop(result);
+    });
+  }
+
+  int _parseCurrencyCentsFromInput(String rawText) {
+    final sanitized = rawText.replaceAll(',', '.').trim();
+    final value = double.tryParse(sanitized);
+    if (value == null || value <= 0) {
+      return 0;
+    }
+    return (value * 100).round();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          widget.existing == null
+              ? tr(
+                  context,
+                  pt: 'Novo combo',
+                  es: 'Nuevo combo',
+                  en: 'New combo',
+                )
+              : tr(
+                  context,
+                  pt: 'Editar combo',
+                  es: 'Editar combo',
+                  en: 'Edit combo',
+                ),
+        ),
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              TextField(
+                controller: _nameController,
+                decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  labelText: tr(
+                    context,
+                    pt: 'Nome do combo',
+                    es: 'Nombre del combo',
+                    en: 'Combo name',
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _minimumPhotosController,
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                ],
+                decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  labelText: tr(
+                    context,
+                    pt: 'Quantidade m\u00ednima de fotos',
+                    es: 'Cantidad m\u00ednima de fotos',
+                    en: 'Minimum photos quantity',
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _unitPriceController,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  labelText: tr(
+                    context,
+                    pt: 'Pre\u00e7o por foto (R\$)',
+                    es: 'Precio por foto (R\$)',
+                    en: 'Price per photo (R\$)',
+                  ),
+                ),
+              ),
+              const Spacer(),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: _submit,
+                  child: Text(
+                    tr(
+                      context,
+                      pt: 'Salvar altera\u00e7\u00f5es',
+                      es: 'Guardar cambios',
+                      en: 'Save changes',
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -2278,3 +3024,5 @@ class _ComputedStats {
   final int expenseCents;
   final int profitCents;
 }
+
+

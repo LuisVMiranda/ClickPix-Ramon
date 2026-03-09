@@ -13,6 +13,27 @@ class AppSettingsStore {
 
   static const Locale defaultLocale = Locale('pt', 'BR');
   static const String defaultAdminUsername = 'admin';
+  static const String defaultAccentColorKey = 'blue_mid';
+  static const Set<String> supportedAccentColorKeys = {
+    'blue_light',
+    'blue_mid',
+    'blue_dark',
+    'green_light',
+    'green_mid',
+    'green_dark',
+    'orange_light',
+    'orange_mid',
+    'orange_dark',
+    'gray_light',
+    'gray_mid',
+    'gray_dark',
+    'red_light',
+    'red_mid',
+    'red_dark',
+    'brown_light',
+    'brown_mid',
+    'brown_dark',
+  };
   static const String _defaultAdminPasswordHash =
       '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9';
 
@@ -40,6 +61,7 @@ class AppSettingsStore {
       highContrastEnabled: row?.highContrastEnabled ?? false,
       solarLargeFontEnabled: row?.solarLargeFontEnabled ?? false,
       themeMode: _themeModeFromStorage(row?.themeMode),
+      accentColorKey: _accentColorKeyFromStorage(row?.accentColorKey),
     );
   }
 
@@ -49,6 +71,8 @@ class AppSettingsStore {
         highContrastEnabled: Value(settings.highContrastEnabled),
         solarLargeFontEnabled: Value(settings.solarLargeFontEnabled),
         themeMode: Value(_themeModeToStorage(settings.themeMode)),
+        accentColorKey:
+            Value(_accentColorKeyFromStorage(settings.accentColorKey)),
       ),
     );
   }
@@ -144,7 +168,7 @@ class AppSettingsStore {
   }) async {
     final sanitizedUsername = username.trim();
     if (sanitizedUsername.isEmpty || newPassword.trim().isEmpty) {
-      throw ArgumentError('Credenciais de administrador invalidas.');
+      throw ArgumentError('Credenciais de administrador inválidas.');
     }
 
     await _saveSettings(
@@ -162,6 +186,7 @@ class AppSettingsStore {
       photographerWhatsapp: row?.photographerWhatsapp ?? '',
       photographerEmail: row?.photographerEmail ?? '',
       photographerPixKey: row?.photographerPixKey ?? '',
+      photographerPaypal: row?.photographerPaypal ?? '',
     );
   }
 
@@ -172,6 +197,28 @@ class AppSettingsStore {
         photographerWhatsapp: Value(profile.photographerWhatsapp.trim()),
         photographerEmail: Value(profile.photographerEmail.trim()),
         photographerPixKey: Value(profile.photographerPixKey.trim()),
+        photographerPaypal: Value(profile.photographerPaypal.trim()),
+      ),
+    );
+  }
+
+  Future<PaymentIntegrationSettings> loadPaymentIntegrationSettings() async {
+    final row = await _loadSettingsRow();
+    return PaymentIntegrationSettings(
+      provider: PaymentProviderX.fromStorage(row?.paymentProvider),
+      apiBaseUrl: row?.paymentApiBaseUrl ?? '',
+      apiToken: row?.paymentApiToken ?? '',
+    );
+  }
+
+  Future<void> savePaymentIntegrationSettings(
+    PaymentIntegrationSettings settings,
+  ) async {
+    await _saveSettings(
+      AppSettingsCompanion(
+        paymentProvider: Value(settings.provider.toStorage()),
+        paymentApiBaseUrl: Value(settings.apiBaseUrl.trim()),
+        paymentApiToken: Value(settings.apiToken.trim()),
       ),
     );
   }
@@ -185,6 +232,67 @@ class AppSettingsStore {
     await _saveSettings(
       AppSettingsCompanion(
         preferredInputFolder: Value(folderPath.trim()),
+      ),
+    );
+  }
+
+  Future<List<PictureComboPricing>> loadPictureCombos() async {
+    final row = await _loadSettingsRow();
+    final rawJson = row?.pictureCombosJson ?? '[]';
+    final decoded = jsonDecode(rawJson);
+    if (decoded is! List) {
+      return const [];
+    }
+
+    final combos = decoded
+        .whereType<Map>()
+        .map(
+          (raw) => raw.map(
+            (key, value) => MapEntry(key.toString(), value),
+          ),
+        )
+        .map(PictureComboPricing.fromJson)
+        .where(
+          (combo) =>
+              combo.name.trim().isNotEmpty &&
+              combo.minimumPhotos > 0 &&
+              combo.unitPriceCents > 0,
+        )
+        .toList(growable: false);
+
+    final sorted = [...combos]
+      ..sort((a, b) => a.minimumPhotos.compareTo(b.minimumPhotos));
+    return sorted;
+  }
+
+  Future<void> savePictureCombos(List<PictureComboPricing> combos) async {
+    final cleaned = combos
+        .where(
+          (combo) =>
+              combo.name.trim().isNotEmpty &&
+              combo.minimumPhotos > 0 &&
+              combo.unitPriceCents > 0,
+        )
+        .toList(growable: false);
+    final rawJson = jsonEncode(
+      cleaned.map((combo) => combo.toJson()).toList(growable: false),
+    );
+    await _saveSettings(
+      AppSettingsCompanion(
+        pictureCombosJson: Value(rawJson),
+      ),
+    );
+  }
+
+  Future<String> loadLastSelectedPictureComboId() async {
+    final row = await _loadSettingsRow();
+    return row?.lastSelectedPictureComboId ?? '';
+  }
+
+  Future<void> saveLastSelectedPictureComboId(String comboId) async {
+    await _saveSettings(
+      AppSettingsCompanion(
+        lastSelectedPictureComboId: Value(comboId.trim()),
       ),
     );
   }
@@ -247,14 +355,21 @@ class AppSettingsStore {
             highContrastEnabled: changes.highContrastEnabled,
             solarLargeFontEnabled: changes.solarLargeFontEnabled,
             themeMode: changes.themeMode,
+            accentColorKey: changes.accentColorKey,
             adminUsername: changes.adminUsername,
             adminPasswordHash: changes.adminPasswordHash,
             photographerName: changes.photographerName,
             photographerWhatsapp: changes.photographerWhatsapp,
             photographerEmail: changes.photographerEmail,
             photographerPixKey: changes.photographerPixKey,
+            photographerPaypal: changes.photographerPaypal,
+            paymentProvider: changes.paymentProvider,
+            paymentApiBaseUrl: changes.paymentApiBaseUrl,
+            paymentApiToken: changes.paymentApiToken,
             deliveryHistoryJson: changes.deliveryHistoryJson,
             preferredInputFolder: changes.preferredInputFolder,
+            pictureCombosJson: changes.pictureCombosJson,
+            lastSelectedPictureComboId: changes.lastSelectedPictureComboId,
           ),
         );
   }
@@ -315,8 +430,132 @@ class AppSettingsStore {
     }
   }
 
+  String _accentColorKeyFromStorage(String? value) {
+    final normalized = value?.trim().toLowerCase() ?? '';
+    if (normalized.startsWith('teal_')) {
+      return defaultAccentColorKey;
+    }
+    if (supportedAccentColorKeys.contains(normalized)) {
+      final parts = normalized.split('_');
+      if (parts.length == 2) {
+        return '${parts.first}_mid';
+      }
+      return normalized;
+    }
+    return defaultAccentColorKey;
+  }
+
   String _hashPassword(String rawPassword) {
     return sha256.convert(utf8.encode(rawPassword.trim())).toString();
+  }
+}
+
+enum PaymentProvider {
+  manual,
+  bancoDoBrasil,
+  itau,
+  bradesco,
+  santander,
+  caixa,
+  inter,
+  nubank,
+  sicredi,
+  sicoob,
+  c6Bank,
+  mercadoPago,
+  outro,
+}
+
+extension PaymentProviderX on PaymentProvider {
+  static PaymentProvider fromStorage(String? value) {
+    switch (value?.trim().toLowerCase()) {
+      case 'banco_do_brasil':
+        return PaymentProvider.bancoDoBrasil;
+      case 'itau':
+        return PaymentProvider.itau;
+      case 'bradesco':
+        return PaymentProvider.bradesco;
+      case 'santander':
+        return PaymentProvider.santander;
+      case 'caixa':
+        return PaymentProvider.caixa;
+      case 'inter':
+        return PaymentProvider.inter;
+      case 'nubank':
+        return PaymentProvider.nubank;
+      case 'sicredi':
+        return PaymentProvider.sicredi;
+      case 'sicoob':
+        return PaymentProvider.sicoob;
+      case 'c6_bank':
+        return PaymentProvider.c6Bank;
+      case 'mercado_pago':
+        return PaymentProvider.mercadoPago;
+      case 'outro':
+      case 'custom':
+        return PaymentProvider.outro;
+      case 'manual':
+      default:
+        return PaymentProvider.manual;
+    }
+  }
+
+  String toStorage() {
+    switch (this) {
+      case PaymentProvider.bancoDoBrasil:
+        return 'banco_do_brasil';
+      case PaymentProvider.itau:
+        return 'itau';
+      case PaymentProvider.bradesco:
+        return 'bradesco';
+      case PaymentProvider.santander:
+        return 'santander';
+      case PaymentProvider.caixa:
+        return 'caixa';
+      case PaymentProvider.inter:
+        return 'inter';
+      case PaymentProvider.nubank:
+        return 'nubank';
+      case PaymentProvider.sicredi:
+        return 'sicredi';
+      case PaymentProvider.sicoob:
+        return 'sicoob';
+      case PaymentProvider.c6Bank:
+        return 'c6_bank';
+      case PaymentProvider.mercadoPago:
+        return 'mercado_pago';
+      case PaymentProvider.outro:
+        return 'outro';
+      case PaymentProvider.manual:
+        return 'manual';
+    }
+  }
+}
+
+class PaymentIntegrationSettings {
+  const PaymentIntegrationSettings({
+    this.provider = PaymentProvider.manual,
+    this.apiBaseUrl = '',
+    this.apiToken = '',
+  });
+
+  final PaymentProvider provider;
+  final String apiBaseUrl;
+  final String apiToken;
+
+  bool get isApiEnabled =>
+      provider != PaymentProvider.manual && apiBaseUrl.trim().isNotEmpty;
+
+  PaymentIntegrationSettings copyWith({
+    PaymentProvider? provider,
+    String? apiBaseUrl,
+    String? apiToken,
+  }) {
+    return PaymentIntegrationSettings(
+      provider: provider ?? this.provider,
+      apiBaseUrl: apiBaseUrl ?? this.apiBaseUrl,
+      apiToken: apiToken ?? this.apiToken,
+    );
   }
 }
 
@@ -325,22 +564,26 @@ class AppVisualSettings {
     this.highContrastEnabled = false,
     this.solarLargeFontEnabled = false,
     this.themeMode = ThemeMode.system,
+    this.accentColorKey = AppSettingsStore.defaultAccentColorKey,
   });
 
   final bool highContrastEnabled;
   final bool solarLargeFontEnabled;
   final ThemeMode themeMode;
+  final String accentColorKey;
 
   AppVisualSettings copyWith({
     bool? highContrastEnabled,
     bool? solarLargeFontEnabled,
     ThemeMode? themeMode,
+    String? accentColorKey,
   }) {
     return AppVisualSettings(
       highContrastEnabled: highContrastEnabled ?? this.highContrastEnabled,
       solarLargeFontEnabled:
           solarLargeFontEnabled ?? this.solarLargeFontEnabled,
       themeMode: themeMode ?? this.themeMode,
+      accentColorKey: accentColorKey ?? this.accentColorKey,
     );
   }
 }
@@ -382,24 +625,28 @@ class BusinessProfileSettings {
     required this.photographerWhatsapp,
     required this.photographerEmail,
     required this.photographerPixKey,
+    required this.photographerPaypal,
   });
 
   final String photographerName;
   final String photographerWhatsapp;
   final String photographerEmail;
   final String photographerPixKey;
+  final String photographerPaypal;
 
   BusinessProfileSettings copyWith({
     String? photographerName,
     String? photographerWhatsapp,
     String? photographerEmail,
     String? photographerPixKey,
+    String? photographerPaypal,
   }) {
     return BusinessProfileSettings(
       photographerName: photographerName ?? this.photographerName,
       photographerWhatsapp: photographerWhatsapp ?? this.photographerWhatsapp,
       photographerEmail: photographerEmail ?? this.photographerEmail,
       photographerPixKey: photographerPixKey ?? this.photographerPixKey,
+      photographerPaypal: photographerPaypal ?? this.photographerPaypal,
     );
   }
 }
@@ -458,7 +705,7 @@ class DeliveryHistoryEntry {
       channel: json['channel'] as String? ?? 'desconhecido',
       paymentRequired: json['paymentRequired'] == true,
       paymentMethodLabel:
-          json['paymentMethodLabel'] as String? ?? 'Nao informado',
+          json['paymentMethodLabel'] as String? ?? 'Não informado',
       photoCount: (json['photoCount'] as num?)?.toInt() ?? 0,
       totalAmountCents: (json['totalAmountCents'] as num?)?.toInt() ?? 0,
       createdAt: rawCreatedAt == null
@@ -468,3 +715,50 @@ class DeliveryHistoryEntry {
     );
   }
 }
+
+class PictureComboPricing {
+  const PictureComboPricing({
+    required this.id,
+    required this.name,
+    required this.minimumPhotos,
+    required this.unitPriceCents,
+  });
+
+  final String id;
+  final String name;
+  final int minimumPhotos;
+  final int unitPriceCents;
+
+  PictureComboPricing copyWith({
+    String? id,
+    String? name,
+    int? minimumPhotos,
+    int? unitPriceCents,
+  }) {
+    return PictureComboPricing(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      minimumPhotos: minimumPhotos ?? this.minimumPhotos,
+      unitPriceCents: unitPriceCents ?? this.unitPriceCents,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'minimumPhotos': minimumPhotos,
+      'unitPriceCents': unitPriceCents,
+    };
+  }
+
+  factory PictureComboPricing.fromJson(Map<String, dynamic> json) {
+    return PictureComboPricing(
+      id: json['id'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      minimumPhotos: (json['minimumPhotos'] as num?)?.toInt() ?? 0,
+      unitPriceCents: (json['unitPriceCents'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+

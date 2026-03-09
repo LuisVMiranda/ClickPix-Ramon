@@ -6,7 +6,7 @@ import 'package:sqlite3/sqlite3.dart' as sqlite;
 
 void main() {
   group('AppDatabase migration', () {
-    test('migrates schema v1 to v6 preserving existing data', () async {
+    test('migrates schema v1 to v11 preserving existing data', () async {
       final sqliteDb = sqlite.sqlite3.openInMemory();
       sqliteDb.execute('''
         CREATE TABLE clients (
@@ -50,7 +50,7 @@ void main() {
 
       final database = AppDatabase(NativeDatabase.opened(sqliteDb));
 
-      expect(database.schemaVersion, 6);
+      expect(database.schemaVersion, 11);
 
       final orders = await database.select(database.orders).get();
       expect(orders, hasLength(1));
@@ -137,6 +137,7 @@ void main() {
               highContrastEnabled: drift.Value(true),
               solarLargeFontEnabled: drift.Value(true),
               themeMode: drift.Value('dark'),
+              accentColorKey: drift.Value('blue_dark'),
             ),
           );
 
@@ -150,6 +151,7 @@ void main() {
       expect(settings.highContrastEnabled, isTrue);
       expect(settings.solarLargeFontEnabled, isTrue);
       expect(settings.themeMode, 'dark');
+      expect(settings.accentColorKey, 'blue_dark');
     });
 
     test('creates order items linked to order and photo asset', () async {

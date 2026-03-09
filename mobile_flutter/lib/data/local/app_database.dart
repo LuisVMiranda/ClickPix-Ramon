@@ -68,18 +68,30 @@ class AppSettings extends Table {
   BoolColumn get solarLargeFontEnabled =>
       boolean().withDefault(const Constant(false))();
   TextColumn get themeMode => text().withDefault(const Constant('system'))();
+  TextColumn get accentColorKey =>
+      text().withDefault(const Constant('blue_mid'))();
   TextColumn get adminUsername => text().withDefault(const Constant('admin'))();
   TextColumn get adminPasswordHash => text().withDefault(const Constant(
       '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9'))();
   TextColumn get photographerName =>
-      text().withDefault(const Constant('Fotografo'))();
+      text().withDefault(const Constant('Fotógrafo'))();
   TextColumn get photographerWhatsapp =>
       text().withDefault(const Constant(''))();
   TextColumn get photographerEmail => text().withDefault(const Constant(''))();
   TextColumn get photographerPixKey => text().withDefault(const Constant(''))();
+  TextColumn get photographerPaypal => text().withDefault(const Constant(''))();
+  TextColumn get paymentProvider =>
+      text().withDefault(const Constant('manual'))();
+  TextColumn get paymentApiBaseUrl =>
+      text().withDefault(const Constant(''))();
+  TextColumn get paymentApiToken => text().withDefault(const Constant(''))();
   TextColumn get deliveryHistoryJson =>
       text().withDefault(const Constant('[]'))();
   TextColumn get preferredInputFolder =>
+      text().withDefault(const Constant(''))();
+  TextColumn get pictureCombosJson =>
+      text().withDefault(const Constant('[]'))();
+  TextColumn get lastSelectedPictureComboId =>
       text().withDefault(const Constant(''))();
 
   @override
@@ -116,7 +128,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -139,6 +151,9 @@ class AppDatabase extends _$AppDatabase {
           if (from >= 3 && from < 4) {
             await m.addColumn(appSettings, appSettings.themeMode);
           }
+          if (from >= 2 && from < 7) {
+            await m.addColumn(appSettings, appSettings.accentColorKey);
+          }
           if (from < 5) {
             await m.createTable(uploadTasks);
             await m.database.customStatement(
@@ -158,6 +173,24 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(appSettings, appSettings.deliveryHistoryJson);
             await m.addColumn(appSettings, appSettings.preferredInputFolder);
           }
+          if (from >= 2 && from < 8) {
+            await m.addColumn(appSettings, appSettings.pictureCombosJson);
+          }
+          if (from >= 2 && from < 9) {
+            await m.addColumn(
+              appSettings,
+              appSettings.lastSelectedPictureComboId,
+            );
+          }
+          if (from >= 2 && from < 10) {
+            await m.addColumn(appSettings, appSettings.photographerPaypal);
+          }
+          if (from >= 2 && from < 11) {
+            await m.addColumn(appSettings, appSettings.paymentProvider);
+            await m.addColumn(appSettings, appSettings.paymentApiBaseUrl);
+            await m.addColumn(appSettings, appSettings.paymentApiToken);
+          }
         },
       );
 }
+

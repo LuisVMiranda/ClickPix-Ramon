@@ -19,9 +19,7 @@ class LocalClientRepository implements ClientRepository {
             id: id,
             name: name,
             whatsapp: whatsapp,
-            email: email == null
-                ? const Value.absent()
-                : Value(email),
+            email: email == null ? const Value.absent() : Value(email),
           ),
         );
   }
@@ -41,6 +39,33 @@ class LocalClientRepository implements ClientRepository {
           ),
         )
         .toList(growable: false);
+  }
+
+  Future<void> updateClient({
+    required String id,
+    required String name,
+    required String whatsapp,
+    String? email,
+  }) async {
+    await (_database.update(_database.clients)
+          ..where((tbl) => tbl.id.equals(id)))
+        .write(
+      ClientsCompanion(
+        name: Value(name),
+        whatsapp: Value(whatsapp),
+        email: Value(email),
+      ),
+    );
+  }
+
+  Future<void> deleteClient(String id) async {
+    await (_database.delete(_database.clients)
+          ..where((tbl) => tbl.id.equals(id)))
+        .go();
+  }
+
+  Future<void> deleteAllClients() async {
+    await _database.delete(_database.clients).go();
   }
 }
 

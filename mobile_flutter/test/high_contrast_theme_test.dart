@@ -28,7 +28,7 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Entrar'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Configurações').first);
+    await tester.tap(find.byIcon(Icons.settings).first);
     await tester.pumpAndSettle();
 
     await tester.ensureVisible(find.text('Alto contraste'));
