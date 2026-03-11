@@ -17,6 +17,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:drift/drift.dart' show OrderingMode, OrderingTerm;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:path/path.dart' as p;
 import 'package:photo_manager/photo_manager.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -558,7 +559,7 @@ class _RecentPhotosPageState extends State<RecentPhotosPage> {
                               _savePreferredCombo(value);
                             },
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 18),
                   ],
                   TextField(
                     controller: _unitPriceController,
@@ -831,8 +832,7 @@ class _RecentPhotosPageState extends State<RecentPhotosPage> {
   }
 
   Future<void> _createOrder() async {
-    final history = await widget.settingsStore.loadDeliveryHistory();
-    final selectedClient = await _showClientSelector(history);
+    final selectedClient = await _showClientSelector();
     if (selectedClient == null) {
       return;
     }
@@ -851,7 +851,8 @@ class _RecentPhotosPageState extends State<RecentPhotosPage> {
       ...selectedAssets.map((asset) => 'asset_${asset.id}'),
       ...selectedImportedIds,
     ];
-    final orderId = 'order_${DateTime.now().microsecondsSinceEpoch}';
+    final saleDate = DateTime.now();
+    final orderId = 'order_${saleDate.microsecondsSinceEpoch}';
     final pricing = _calculatePricing(itemIds.length);
     final totalAmountCents =
         widget.requirePayment ? pricing.totalAmountCents : 0;
@@ -869,7 +870,7 @@ class _RecentPhotosPageState extends State<RecentPhotosPage> {
           : domain.PaymentMethod.pix,
     );
     await _orderRepository.createOrder(order);
-    await _uploadQueueService.processQueue();
+    final cloudUploadWarning = await _evaluateCloudUploadFallback();
 
     if (!mounted) {
       return;
@@ -880,6 +881,8 @@ class _RecentPhotosPageState extends State<RecentPhotosPage> {
       client: selectedClient,
       order: order,
       businessProfile: businessProfile,
+      saleDate: saleDate,
+      cloudUploadWarning: cloudUploadWarning,
     );
 
     setState(() {
@@ -892,35 +895,91 @@ class _RecentPhotosPageState extends State<RecentPhotosPage> {
     if (!mounted) {
       return;
     }
+
+    final successMessage = widget.requirePayment
+        ? tr(
+            context,
+            pt: 'Pedido criado com sucesso. Link e c\u00f3digo prontos para envio.',
+            es: 'Pedido creado con \u00e9xito. Enlace y c\u00f3digo listos para enviar.',
+            en: 'Order created successfully. Link and code are ready to send.',
+          )
+        : tr(
+            context,
+            pt: 'Envio sem pagamento preparado com sucesso.',
+            es: 'Env\u00edo sin pago preparado con \u00e9xito.',
+            en: 'No-payment dispatch prepared successfully.',
+          );
+    final summaryMessage =
+        cloudUploadWarning == null || cloudUploadWarning.trim().isEmpty
+            ? successMessage
+            : '$successMessage\n$cloudUploadWarning';
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          widget.requirePayment
-              ? tr(
-                  context,
-                  pt: 'Pedido criado com sucesso. Link e código prontos para envio.',
-                  es: 'Pedido creado con éxito. Enlace y código listos para enviar.',
-                  en: 'Order created successfully. Link and code are ready to send.',
-                )
-              : tr(
-                  context,
-                  pt: 'Envio sem pagamento preparado com sucesso.',
-                  es: 'Envío sin pago preparado con éxito.',
-                  en: 'No-payment dispatch prepared successfully.',
-                ),
-        ),
+        content: Text(summaryMessage),
       ),
     );
   }
 
-  Future<ClientSummary?> _showClientSelector(
-      List<DeliveryHistoryEntry> history) {
+  Future<String?> _evaluateCloudUploadFallback() async {
+    final webAccessSettings =
+        await widget.settingsStore.loadDeliveryWebAccessSettings();
+    final hasValidUrl = _hasValidWebAccessUrl(webAccessSettings.baseDomainUrl);
+    final hasDbCredentials = webAccessSettings.dbUsername.trim().isNotEmpty &&
+        webAccessSettings.dbPassword.trim().isNotEmpty;
+
+    UploadQueueProcessResult queueResult;
+    try {
+      queueResult = await _uploadQueueService.processQueue();
+    } on Object {
+      if (!mounted) {
+        return null;
+      }
+      return tr(
+        context,
+        pt: 'Upload na nuvem falhou, mas a venda e o envio est\u00e3o liberados por WhatsApp/e-mail.',
+        es: 'La subida a la nube fall\u00f3, pero la venta y el env\u00edo est\u00e1n habilitados por WhatsApp/correo.',
+        en: 'Cloud upload failed, but the sale and dispatch are still enabled via WhatsApp/email.',
+      );
+    }
+
+    if (!hasValidUrl || !hasDbCredentials) {
+      return tr(
+        context,
+        pt: 'Upload na nuvem n\u00e3o conclu\u00eddo: configure URL e credenciais em Configura\u00e7\u00f5es > Acesso web e banco do site.',
+        es: 'Subida a la nube no completada: configura URL y credenciales en Configuraci\u00f3n > Acceso web y base de datos.',
+        en: 'Cloud upload not completed: configure URL and credentials in Settings > Website access and database.',
+      );
+    }
+
+    if (queueResult.blockedByNetwork) {
+      return tr(
+        context,
+        pt: 'Upload na nuvem pendente por restri\u00e7\u00e3o de rede. O envio ao cliente segue dispon\u00edvel.',
+        es: 'Subida a la nube pendiente por restricci\u00f3n de red. El env\u00edo al cliente sigue disponible.',
+        en: 'Cloud upload is pending due to network restrictions. Client delivery is still available.',
+      );
+    }
+
+    return null;
+  }
+
+  bool _hasValidWebAccessUrl(String rawBaseUrl) {
+    final raw = rawBaseUrl.trim();
+    if (raw.isEmpty) {
+      return false;
+    }
+    final normalized = raw.contains('://') ? raw : 'https://$raw';
+    final uri = Uri.tryParse(normalized);
+    return uri != null && uri.host.trim().isNotEmpty;
+  }
+
+  Future<ClientSummary?> _showClientSelector() {
     return showModalBottomSheet<ClientSummary>(
       context: context,
       isScrollControlled: true,
       builder: (context) => _ClientSelectorSheet(
         clientRepository: _clientRepository,
-        history: history,
       ),
     );
   }
@@ -929,12 +988,20 @@ class _RecentPhotosPageState extends State<RecentPhotosPage> {
     required ClientSummary client,
     required domain.Order order,
     required BusinessProfileSettings businessProfile,
+    required DateTime saleDate,
+    String? cloudUploadWarning,
   }) async {
-    final link = 'https://clickpix.app/gallery/${order.id}';
+    final webAccessSettings =
+        await widget.settingsStore.loadDeliveryWebAccessSettings();
+    final deliverySettings = await widget.settingsStore.loadDeliverySettings();
+    final link = _buildGalleryLink(webAccessSettings, order.id);
     final code = (100000 + Random().nextInt(900000)).toString();
+    final accessCodeExpiresAt = saleDate.add(
+      Duration(days: deliverySettings.accessCodeValidityDays),
+    );
     final currency = _toCurrency(order.totalAmountCents);
-    final isPixPayment =
-        widget.requirePayment && _selectedPaymentChoice == DeliveryPaymentChoice.pix;
+    final isPixPayment = widget.requirePayment &&
+        _selectedPaymentChoice == DeliveryPaymentChoice.pix;
 
     final paymentIntegration = isPixPayment
         ? await widget.settingsStore.loadPaymentIntegrationSettings()
@@ -984,7 +1051,7 @@ class _RecentPhotosPageState extends State<RecentPhotosPage> {
       } else if (localPixPayload.isNotEmpty) {
         pixSourceHint = tr(
           context,
-          pt: 'API indisponível no momento. Usando QR Pix local.',
+          pt: 'API indispon\u00edvel no momento. Usando QR Pix local.',
           es: 'API no disponible en este momento. Usando QR Pix local.',
           en: 'API unavailable right now. Using local Pix QR.',
         );
@@ -998,20 +1065,50 @@ class _RecentPhotosPageState extends State<RecentPhotosPage> {
       );
     }
 
-    final paymentText = widget.requirePayment
+    final paymentDetails = widget.requirePayment
         ? switch (_selectedPaymentChoice) {
             DeliveryPaymentChoice.pix =>
-              '\n${tr(context, pt: 'Pagamento', es: 'Pago', en: 'Payment')}: ${_selectedPaymentChoice.label(context)} ($currency)\n'
-                  'Pix: ${businessProfile.photographerPixKey.isEmpty ? tr(context, pt: 'Não informado', es: 'No informado', en: 'Not provided') : businessProfile.photographerPixKey}'
+              '${tr(context, pt: 'Pagamento', es: 'Pago', en: 'Payment')}: ${_selectedPaymentChoice.label(context)} ($currency)\n'
+                  'Pix: ${businessProfile.photographerPixKey.isEmpty ? tr(context, pt: 'N\u00e3o informado', es: 'No informado', en: 'Not provided') : businessProfile.photographerPixKey}'
                   '${pixSourceHint.isEmpty ? '' : '\n$pixSourceHint'}',
             DeliveryPaymentChoice.paypal =>
-              '\n${tr(context, pt: 'Pagamento', es: 'Pago', en: 'Payment')}: ${_selectedPaymentChoice.label(context)} ($currency)\n'
-                  'PayPal: ${businessProfile.photographerPaypal.isEmpty ? tr(context, pt: 'Não informado', es: 'No informado', en: 'Not provided') : businessProfile.photographerPaypal}',
+              '${tr(context, pt: 'Pagamento', es: 'Pago', en: 'Payment')}: ${_selectedPaymentChoice.label(context)} ($currency)\n'
+                  'PayPal: ${businessProfile.photographerPaypal.isEmpty ? tr(context, pt: 'N\u00e3o informado', es: 'No informado', en: 'Not provided') : businessProfile.photographerPaypal}',
           }
-        : '\n${tr(context, pt: 'Envio livre (sem pagamento).', es: 'Envío libre (sin pago).', en: 'Free dispatch (no payment).')}';
+        : tr(
+            context,
+            pt: 'Envio livre (sem pagamento).',
+            es: 'Env\u00edo libre (sin pago).',
+            en: 'Free dispatch (no payment).',
+          );
 
-    final message =
-        '${tr(context, pt: 'Olá', es: 'Hola', en: 'Hello')} ${client.name}! ${tr(context, pt: 'Suas fotos estão prontas.', es: 'Tus fotos están listas.', en: 'Your photos are ready.')}\nLink: $link\n${tr(context, pt: 'Código', es: 'Código', en: 'Code')}: $code$paymentText\n${tr(context, pt: 'Fotógrafo', es: 'Fotógrafo', en: 'Photographer')}: ${businessProfile.photographerName}';
+    final templateSettings =
+        await widget.settingsStore.loadClientMessageTemplates();
+    final currentLanguageCode = Localizations.localeOf(context).languageCode;
+    final messageTemplate =
+        templateSettings.templateForLanguage(currentLanguageCode);
+    final message = _renderClientMessageTemplate(
+      template: messageTemplate,
+      replacements: {
+        'client_name': client.name,
+        'gallery_link': link,
+        'access_code': code,
+        'payment_details': paymentDetails,
+        'photographer_name': businessProfile.photographerName,
+        'amount_due': currency,
+        'payment_method': widget.requirePayment
+            ? _selectedPaymentChoice.label(context)
+            : tr(
+                context,
+                pt: 'Sem pagamento',
+                es: 'Sin pago',
+                en: 'No payment',
+              ),
+        'pix_key': businessProfile.photographerPixKey,
+        'paypal_account': businessProfile.photographerPaypal,
+        'order_id': order.id,
+      },
+    );
 
     if (!mounted) {
       return;
@@ -1023,7 +1120,8 @@ class _RecentPhotosPageState extends State<RecentPhotosPage> {
         return;
       }
       markedAsPaid = true;
-      await _orderRepository.updateOrderStatus(order.id, domain.OrderStatus.paid);
+      await _orderRepository.updateOrderStatus(
+          order.id, domain.OrderStatus.paid);
     }
 
     await showModalBottomSheet<void>(
@@ -1046,8 +1144,8 @@ class _RecentPhotosPageState extends State<RecentPhotosPage> {
                   Text(
                       tr(
                         context,
-                        pt: 'Ações de envio',
-                        es: 'Acciones de envío',
+                        pt: 'A\u00e7\u00f5es de envio',
+                        es: 'Acciones de env\u00edo',
                         en: 'Dispatch actions',
                       ),
                       style: Theme.of(context).textTheme.titleLarge),
@@ -1056,15 +1154,33 @@ class _RecentPhotosPageState extends State<RecentPhotosPage> {
                       '${tr(context, pt: 'Cliente', es: 'Cliente', en: 'Client')}: ${client.name}'),
                   Text('Link: $link'),
                   Text(
-                      '${tr(context, pt: 'Código', es: 'Código', en: 'Code')}: $code'),
+                      '${tr(context, pt: 'C\u00f3digo', es: 'C\u00f3digo', en: 'Code')}: $code'),
                   if (widget.requirePayment)
                     Text(
                       '${tr(context, pt: 'Pagamento', es: 'Pago', en: 'Payment')}: ${_selectedPaymentChoice.label(context)} ($currency)',
                     ),
+                  if (cloudUploadWarning != null &&
+                      cloudUploadWarning.trim().isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        color: Theme.of(context).colorScheme.errorContainer,
+                      ),
+                      child: Text(
+                        cloudUploadWarning,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onErrorContainer,
+                        ),
+                      ),
+                    ),
+                  ],
                   if (_selectedPaymentChoice == DeliveryPaymentChoice.paypal &&
                       widget.requirePayment)
                     Text(
-                      '${tr(context, pt: 'Conta PayPal', es: 'Cuenta PayPal', en: 'PayPal account')}: ${businessProfile.photographerPaypal.isEmpty ? tr(context, pt: 'Não informada', es: 'No informada', en: 'Not provided') : businessProfile.photographerPaypal}',
+                      '${tr(context, pt: 'Conta PayPal', es: 'Cuenta PayPal', en: 'PayPal account')}: ${businessProfile.photographerPaypal.isEmpty ? tr(context, pt: 'N\u00e3o informada', es: 'No informada', en: 'Not provided') : businessProfile.photographerPaypal}',
                     ),
                   if (_selectedPaymentChoice == DeliveryPaymentChoice.pix &&
                       widget.requirePayment) ...[
@@ -1085,7 +1201,14 @@ class _RecentPhotosPageState extends State<RecentPhotosPage> {
                           ? null
                           : () async {
                               await _sendViaWhatsApp(client.whatsapp, message);
-                              await _saveHistory(client, order, 'whatsapp');
+                              await _saveHistory(
+                                client,
+                                order,
+                                'whatsapp',
+                                accessCode: code,
+                                accessCodeExpiresAt: accessCodeExpiresAt,
+                                saleDate: saleDate,
+                              );
                               if (context.mounted) {
                                 Navigator.of(context).pop();
                               }
@@ -1109,7 +1232,14 @@ class _RecentPhotosPageState extends State<RecentPhotosPage> {
                           ? null
                           : () async {
                               await _sendViaEmail(client.email!, message);
-                              await _saveHistory(client, order, 'email');
+                              await _saveHistory(
+                                client,
+                                order,
+                                'email',
+                                accessCode: code,
+                                accessCodeExpiresAt: accessCodeExpiresAt,
+                                saleDate: saleDate,
+                              );
                               if (context.mounted) {
                                 Navigator.of(context).pop();
                               }
@@ -1158,10 +1288,14 @@ class _RecentPhotosPageState extends State<RecentPhotosPage> {
   Future<void> _saveHistory(
     ClientSummary client,
     domain.Order order,
-    String channel,
-  ) async {
+    String channel, {
+    required String accessCode,
+    required DateTime accessCodeExpiresAt,
+    required DateTime saleDate,
+  }) async {
     final pricing = _calculatePricing(order.itemIds.length);
     final comboLabel = pricing.combo?.name;
+    final photoFileNames = _resolvePhotoFileNames(order.itemIds);
     await widget.settingsStore.appendDeliveryHistory(
       DeliveryHistoryEntry(
         id: 'log_${DateTime.now().microsecondsSinceEpoch}',
@@ -1176,7 +1310,7 @@ class _RecentPhotosPageState extends State<RecentPhotosPage> {
                 ? _selectedPaymentChoice.label(context)
                 : pricing.comboEligible
                     ? '${_selectedPaymentChoice.label(context)} - $comboLabel'
-                    : '${_selectedPaymentChoice.label(context)} - $comboLabel (mínimo não atingido)'
+                    : '${_selectedPaymentChoice.label(context)} - $comboLabel (m\u00ednimo n\u00e3o atingido)'
             : tr(
                 context,
                 pt: 'Sem pagamento',
@@ -1186,9 +1320,42 @@ class _RecentPhotosPageState extends State<RecentPhotosPage> {
         photoCount: order.itemIds.length,
         totalAmountCents: order.totalAmountCents,
         createdAt: DateTime.now(),
+        comboName: comboLabel ?? '',
+        unitPriceCents: pricing.unitPriceCents,
+        databaseCode: accessCode,
+        databaseCodeExpiresAt: accessCodeExpiresAt,
+        saleDate: saleDate,
+        photoFileNames: photoFileNames,
       ),
     );
     widget.onDeliveryRegistered?.call();
+  }
+
+  List<String> _resolvePhotoFileNames(List<String> itemIds) {
+    if (itemIds.isEmpty) {
+      return const [];
+    }
+
+    final photosById = <String, _GalleryPhoto>{
+      for (final photo in _photos) photo.id: photo,
+    };
+    final names = <String>[];
+    for (final itemId in itemIds) {
+      final normalizedId =
+          itemId.startsWith('asset_') ? itemId.substring(6) : itemId;
+      final galleryPhoto = photosById[itemId] ?? photosById[normalizedId];
+      final localPath = galleryPhoto?.localPath?.trim() ?? '';
+      if (localPath.isNotEmpty && !localPath.startsWith('asset://')) {
+        names.add(p.basename(localPath));
+        continue;
+      }
+      if (localPath.startsWith('asset://')) {
+        names.add('asset:$normalizedId');
+        continue;
+      }
+      names.add(itemId);
+    }
+    return names.take(120).toList(growable: false);
   }
 
   Future<void> _sendViaWhatsApp(String phone, String message) async {
@@ -1213,6 +1380,45 @@ class _RecentPhotosPageState extends State<RecentPhotosPage> {
       return 1500;
     }
     return (value * 100).round();
+  }
+
+  String _buildGalleryLink(
+    DeliveryWebAccessSettings settings,
+    String orderId,
+  ) {
+    final rawBase = settings.baseDomainUrl.trim().isEmpty
+        ? DeliveryWebAccessSettings.defaultBaseDomainUrl
+        : settings.baseDomainUrl.trim();
+    final normalizedBase =
+        rawBase.contains('://') ? rawBase : 'https://$rawBase';
+    final baseUri = Uri.tryParse(normalizedBase);
+    if (baseUri == null || baseUri.host.trim().isEmpty) {
+      return 'https://clickpix.app/gallery/$orderId';
+    }
+
+    final pathSegments = <String>[
+      ...baseUri.pathSegments.where((segment) => segment.trim().isNotEmpty),
+      'gallery',
+      orderId,
+    ];
+    final resolvedPort =
+        settings.port ?? (baseUri.hasPort ? baseUri.port : null);
+    final resultUri = baseUri.replace(
+      pathSegments: pathSegments,
+      port: resolvedPort,
+    );
+    return resultUri.toString();
+  }
+
+  String _renderClientMessageTemplate({
+    required String template,
+    required Map<String, String> replacements,
+  }) {
+    var result = template.trim();
+    for (final entry in replacements.entries) {
+      result = result.replaceAll('{${entry.key}}', entry.value);
+    }
+    return result;
   }
 
   String _toCurrency(int cents) {
@@ -1309,7 +1515,7 @@ class _PixPaymentCardState extends State<_PixPaymentCard> {
       setState(() {
         _statusError = tr(
           context,
-          pt: 'Não foi possível atualizar o status Pix agora.',
+          pt: 'N\u00e3o foi poss\u00edvel atualizar o status Pix agora.',
           es: 'No fue posible actualizar el estado Pix ahora.',
           en: 'Could not refresh Pix status now.',
         );
@@ -1349,7 +1555,8 @@ class _PixPaymentCardState extends State<_PixPaymentCard> {
               const SizedBox(height: 4),
               Text(widget.sourceHint),
             ],
-            if (widget.paymentIntegration.isApiEnabled && widget.session != null)
+            if (widget.paymentIntegration.isApiEnabled &&
+                widget.session != null)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Wrap(
@@ -1614,11 +1821,9 @@ class _FileThumbnail extends StatelessWidget {
 class _ClientSelectorSheet extends StatefulWidget {
   const _ClientSelectorSheet({
     required this.clientRepository,
-    required this.history,
   });
 
   final LocalClientRepository clientRepository;
-  final List<DeliveryHistoryEntry> history;
 
   @override
   State<_ClientSelectorSheet> createState() => _ClientSelectorSheetState();
@@ -1660,7 +1865,7 @@ class _ClientSelectorSheetState extends State<_ClientSelectorSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final reusableHistory = widget.history.take(3).toList(growable: false);
+    final latestClients = _clients.take(3).toList(growable: false);
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.only(
@@ -1675,63 +1880,72 @@ class _ClientSelectorSheetState extends State<_ClientSelectorSheet> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                  tr(
-                    context,
-                    pt: 'Selecionar cliente',
-                    es: 'Seleccionar cliente',
-                    en: 'Select client',
-                  ),
-                  style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 12),
-              if (reusableHistory.isNotEmpty) ...[
-                Text(
-                    tr(
-                      context,
-                      pt: 'Reutilizar envio recente',
-                      es: 'Reutilizar envío reciente',
-                      en: 'Reuse recent dispatch',
-                    ),
-                    style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 6),
-                ...reusableHistory.map(
-                  (entry) => ListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(entry.clientName),
-                    subtitle: Text(entry.clientWhatsapp.isNotEmpty
-                        ? entry.clientWhatsapp
-                        : entry.clientEmail),
-                    trailing: const Icon(Icons.replay),
-                    onTap: () {
-                      _nameController.text = entry.clientName;
-                      _whatsController.text = entry.clientWhatsapp;
-                      _emailController.text = entry.clientEmail;
-                      setState(() {});
-                    },
-                  ),
+                tr(
+                  context,
+                  pt: 'Selecionar cliente',
+                  es: 'Seleccionar cliente',
+                  en: 'Select client',
                 ),
-                const Divider(height: 24),
-              ],
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 12),
               if (_loading)
                 const Center(child: CircularProgressIndicator())
-              else if (_clients.isNotEmpty)
-                ..._clients.map(
-                  (client) => ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(client.name),
-                    subtitle: Text(client.whatsapp),
-                    onTap: () => Navigator.of(context).pop(client),
-                  ),
-                ),
-              const Divider(height: 24),
-              Text(
+              else if (_clients.isEmpty)
+                Text(
                   tr(
                     context,
-                    pt: 'Novo cliente',
-                    es: 'Nuevo cliente',
-                    en: 'New client',
+                    pt: 'Nenhum contato cadastrado ainda.',
+                    es: 'Aún no hay contactos registrados.',
+                    en: 'No contacts saved yet.',
                   ),
-                  style: Theme.of(context).textTheme.titleMedium),
+                )
+              else ...[
+                Text(
+                  tr(
+                    context,
+                    pt: 'Últimos contatos adicionados',
+                    es: 'Últimos contactos agregados',
+                    en: 'Latest added contacts',
+                  ),
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 6),
+                ...latestClients.map(
+                  (client) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: _ClientSelectionCard(
+                      client: client,
+                      onTap: () => Navigator.of(context).pop(client),
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _openAllContactsPage,
+                    icon: const Icon(Icons.list_alt),
+                    label: Text(
+                      tr(
+                        context,
+                        pt: 'Todos os contatos',
+                        es: 'Todos los contactos',
+                        en: 'All contacts',
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+              const Divider(height: 24),
+              Text(
+                tr(
+                  context,
+                  pt: 'Novo cliente',
+                  es: 'Nuevo cliente',
+                  en: 'New client',
+                ),
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               const SizedBox(height: 8),
               TextField(
                 controller: _nameController,
@@ -1783,6 +1997,20 @@ class _ClientSelectorSheetState extends State<_ClientSelectorSheet> {
     );
   }
 
+  Future<void> _openAllContactsPage() async {
+    final selectedClient = await Navigator.of(context).push<ClientSummary>(
+      MaterialPageRoute(
+        builder: (_) => _AllContactsPickerPage(
+          clients: _clients,
+        ),
+      ),
+    );
+    if (selectedClient == null || !mounted) {
+      return;
+    }
+    Navigator.of(context).pop(selectedClient);
+  }
+
   Future<void> _createAndSelectClient() async {
     final name = _nameController.text.trim();
     final whatsapp = _whatsController.text.trim();
@@ -1810,12 +2038,125 @@ class _ClientSelectorSheetState extends State<_ClientSelectorSheet> {
       whatsapp: whatsapp,
       email: email.isEmpty ? null : email,
     );
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) {
-        return;
-      }
-      Navigator.of(context).pop(summary);
-    });
+    Navigator.of(context).pop(summary);
+  }
+}
+
+class _AllContactsPickerPage extends StatelessWidget {
+  const _AllContactsPickerPage({
+    required this.clients,
+  });
+
+  final List<ClientSummary> clients;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          tr(
+            context,
+            pt: 'Todos os contatos',
+            es: 'Todos los contactos',
+            en: 'All contacts',
+          ),
+        ),
+      ),
+      body: clients.isEmpty
+          ? Center(
+              child: Text(
+                tr(
+                  context,
+                  pt: 'Nenhum contato disponível.',
+                  es: 'No hay contactos disponibles.',
+                  en: 'No contacts available.',
+                ),
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: clients.length,
+              itemBuilder: (context, index) {
+                final client = clients[index];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: _ClientSelectionCard(
+                    client: client,
+                    onTap: () => Navigator.of(context).pop(client),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+}
+
+class _ClientSelectionCard extends StatelessWidget {
+  const _ClientSelectionCard({
+    required this.client,
+    required this.onTap,
+  });
+
+  final ClientSummary client;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final borderColor = scheme.primary.withOpacity(
+      scheme.brightness == Brightness.light ? 0.22 : 0.38,
+    );
+    final subtitle = client.email == null || client.email!.trim().isEmpty
+        ? client.whatsapp
+        : '${client.whatsapp} - ${client.email}';
+
+    return Material(
+      color: scheme.surface,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: borderColor, width: 1.2),
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: scheme.primaryContainer,
+                foregroundColor: scheme.onPrimaryContainer,
+                child: const Icon(Icons.person_outline),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      client.name,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(
+                Icons.chevron_right,
+                color: scheme.primary,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -1846,7 +2187,3 @@ class _PricingCalculation {
   final PictureComboPricing? combo;
   final bool comboEligible;
 }
-
-
-
-

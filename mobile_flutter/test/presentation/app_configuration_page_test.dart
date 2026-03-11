@@ -28,10 +28,12 @@ void main() {
             settingsStore: store,
             locale: const Locale('pt', 'BR'),
             visualSettings: const AppVisualSettings(),
+            backgroundSettings: const AppBackgroundSettings(),
             onLocaleChanged: (_) async {},
             onVisualSettingsChanged: (settings) async {
               lastVisualSettings = settings;
             },
+            onBackgroundSettingsChanged: (_) async {},
           ),
         ),
       );

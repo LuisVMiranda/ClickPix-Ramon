@@ -125,8 +125,7 @@ class _ManageContactsPageState extends State<ManageContactsPage> {
 
     final nameParts = result.name.trim().split(RegExp(r'\s+'));
     final firstName = nameParts.isEmpty ? result.name : nameParts.first;
-    final lastName =
-        nameParts.length > 1 ? nameParts.skip(1).join(' ') : '';
+    final lastName = nameParts.length > 1 ? nameParts.skip(1).join(' ') : '';
 
     final contact = Contact()
       ..name.first = firstName
@@ -594,13 +593,7 @@ class _ContactEditorPageState extends State<_ContactEditorPage> {
       email: email.isEmpty ? null : email,
       addToPhoneContacts: _addToPhoneContacts,
     );
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) {
-        return;
-      }
-      Navigator.of(context).pop(result);
-    });
+    Navigator.of(context).pop(result);
   }
 
   @override

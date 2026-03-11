@@ -102,9 +102,119 @@ class AppSettingsStore {
 
   Future<void> saveWatermarkConfig(WatermarkConfig config) async {
     config.validate();
+    final row = await _loadSettingsRow();
+    final merged = _parseSettingsJsonObject(row?.watermarkConfigJson ?? '{}');
+    merged['enabled'] = config.enabled;
+    if (config.fileName != null && config.fileName!.trim().isNotEmpty) {
+      merged['fileName'] = config.fileName;
+    } else {
+      merged.remove('fileName');
+    }
     await _saveSettings(
       AppSettingsCompanion(
-        watermarkConfigJson: Value(config.toJson()),
+        watermarkConfigJson: Value(jsonEncode(merged)),
+      ),
+    );
+  }
+
+  Future<AppBackgroundSettings> loadBackgroundSettings() async {
+    final row = await _loadSettingsRow();
+    final raw = row?.watermarkConfigJson ?? '{}';
+    final decoded = _parseSettingsJsonObject(raw);
+    final rawImagePath = decoded['backgroundImagePath'] as String?;
+    final rawOpacity = decoded['backgroundOpacityPercent'];
+    final opacityPercent = rawOpacity is num ? rawOpacity.toDouble() : 30.0;
+    return AppBackgroundSettings(
+      imagePath: (rawImagePath ?? '').trim(),
+      opacityPercent: opacityPercent.clamp(0, 100),
+    );
+  }
+
+  Future<void> saveBackgroundSettings(AppBackgroundSettings settings) async {
+    final row = await _loadSettingsRow();
+    final merged = _parseSettingsJsonObject(row?.watermarkConfigJson ?? '{}');
+    final imagePath = settings.imagePath.trim();
+    if (imagePath.isEmpty) {
+      merged.remove('backgroundImagePath');
+    } else {
+      merged['backgroundImagePath'] = imagePath;
+    }
+    merged['backgroundOpacityPercent'] = settings.opacityPercent.clamp(0, 100);
+
+    await _saveSettings(
+      AppSettingsCompanion(
+        watermarkConfigJson: Value(jsonEncode(merged)),
+      ),
+    );
+  }
+
+  Future<DeliveryWebAccessSettings> loadDeliveryWebAccessSettings() async {
+    final row = await _loadSettingsRow();
+    final root = _parseSettingsJsonObject(row?.watermarkConfigJson ?? '{}');
+    final rawSettings = _asStringKeyedMap(root['deliveryWebAccess']);
+    final rawPort = rawSettings['port'];
+    final parsedPort = rawPort is num
+        ? rawPort.toInt()
+        : int.tryParse(rawPort?.toString() ?? '');
+    return DeliveryWebAccessSettings(
+      baseDomainUrl:
+          (rawSettings['baseDomainUrl'] as String?)?.trim().isNotEmpty == true
+              ? (rawSettings['baseDomainUrl'] as String).trim()
+              : DeliveryWebAccessSettings.defaultBaseDomainUrl,
+      port: parsedPort != null && parsedPort > 0 && parsedPort <= 65535
+          ? parsedPort
+          : null,
+      dbUsername: (rawSettings['dbUsername'] as String? ?? '').trim(),
+      dbPassword: (rawSettings['dbPassword'] as String? ?? '').trim(),
+    );
+  }
+
+  Future<void> saveDeliveryWebAccessSettings(
+    DeliveryWebAccessSettings settings,
+  ) async {
+    final row = await _loadSettingsRow();
+    final merged = _parseSettingsJsonObject(row?.watermarkConfigJson ?? '{}');
+    merged['deliveryWebAccess'] = {
+      'baseDomainUrl': settings.baseDomainUrl.trim().isEmpty
+          ? DeliveryWebAccessSettings.defaultBaseDomainUrl
+          : settings.baseDomainUrl.trim(),
+      'port': settings.port,
+      'dbUsername': settings.dbUsername.trim(),
+      'dbPassword': settings.dbPassword.trim(),
+    };
+    await _saveSettings(
+      AppSettingsCompanion(
+        watermarkConfigJson: Value(jsonEncode(merged)),
+      ),
+    );
+  }
+
+  Future<ClientMessageTemplateSettings> loadClientMessageTemplates() async {
+    final row = await _loadSettingsRow();
+    final root = _parseSettingsJsonObject(row?.watermarkConfigJson ?? '{}');
+    final rawSettings = _asStringKeyedMap(root['clientMessageTemplates']);
+    return ClientMessageTemplateSettings(
+      ptTemplate: (rawSettings['pt'] as String?)?.trim().isNotEmpty == true
+          ? (rawSettings['pt'] as String)
+          : ClientMessageTemplateSettings.defaultPtTemplate,
+      esTemplate: (rawSettings['es'] as String?)?.trim().isNotEmpty == true
+          ? (rawSettings['es'] as String)
+          : ClientMessageTemplateSettings.defaultEsTemplate,
+      enTemplate: (rawSettings['en'] as String?)?.trim().isNotEmpty == true
+          ? (rawSettings['en'] as String)
+          : ClientMessageTemplateSettings.defaultEnTemplate,
+    );
+  }
+
+  Future<void> saveClientMessageTemplates(
+    ClientMessageTemplateSettings settings,
+  ) async {
+    final row = await _loadSettingsRow();
+    final merged = _parseSettingsJsonObject(row?.watermarkConfigJson ?? '{}');
+    merged['clientMessageTemplates'] = settings.toJson();
+    await _saveSettings(
+      AppSettingsCompanion(
+        watermarkConfigJson: Value(jsonEncode(merged)),
       ),
     );
   }
@@ -329,6 +439,19 @@ class AppSettingsStore {
     );
   }
 
+  Future<void> saveDeliveryHistory(List<DeliveryHistoryEntry> entries) async {
+    final sorted = [...entries]
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final rawJson = jsonEncode(
+      sorted.map((item) => item.toJson()).toList(growable: false),
+    );
+    await _saveSettings(
+      AppSettingsCompanion(
+        deliveryHistoryJson: Value(rawJson),
+      ),
+    );
+  }
+
   Future<void> clearDeliveryHistory() async {
     await _saveSettings(
       const AppSettingsCompanion(
@@ -447,6 +570,31 @@ class AppSettingsStore {
 
   String _hashPassword(String rawPassword) {
     return sha256.convert(utf8.encode(rawPassword.trim())).toString();
+  }
+
+  Map<String, dynamic> _parseSettingsJsonObject(String rawJson) {
+    final trimmed = rawJson.trim();
+    if (trimmed.isEmpty) {
+      return <String, dynamic>{};
+    }
+
+    final decoded = jsonDecode(trimmed);
+    if (decoded is! Map) {
+      return <String, dynamic>{};
+    }
+
+    return decoded.map(
+      (key, value) => MapEntry(key.toString(), value),
+    );
+  }
+
+  Map<String, dynamic> _asStringKeyedMap(Object? rawValue) {
+    if (rawValue is! Map) {
+      return <String, dynamic>{};
+    }
+    return rawValue.map(
+      (key, value) => MapEntry(key.toString(), value),
+    );
   }
 }
 
@@ -588,6 +736,139 @@ class AppVisualSettings {
   }
 }
 
+class AppBackgroundSettings {
+  const AppBackgroundSettings({
+    this.imagePath = '',
+    this.opacityPercent = 30,
+  });
+
+  final String imagePath;
+  final double opacityPercent;
+
+  bool get hasImage => imagePath.trim().isNotEmpty;
+  double get opacity => (opacityPercent / 100).clamp(0.0, 1.0);
+
+  AppBackgroundSettings copyWith({
+    String? imagePath,
+    double? opacityPercent,
+  }) {
+    return AppBackgroundSettings(
+      imagePath: imagePath ?? this.imagePath,
+      opacityPercent: (opacityPercent ?? this.opacityPercent).clamp(0, 100),
+    );
+  }
+}
+
+class DeliveryWebAccessSettings {
+  const DeliveryWebAccessSettings({
+    this.baseDomainUrl = defaultBaseDomainUrl,
+    this.port,
+    this.dbUsername = '',
+    this.dbPassword = '',
+  });
+
+  static const String defaultBaseDomainUrl = 'https://clickpix.app';
+  final String baseDomainUrl;
+  final int? port;
+  final String dbUsername;
+  final String dbPassword;
+
+  DeliveryWebAccessSettings copyWith({
+    String? baseDomainUrl,
+    int? port,
+    bool clearPort = false,
+    String? dbUsername,
+    String? dbPassword,
+  }) {
+    return DeliveryWebAccessSettings(
+      baseDomainUrl: baseDomainUrl ?? this.baseDomainUrl,
+      port: clearPort ? null : (port ?? this.port),
+      dbUsername: dbUsername ?? this.dbUsername,
+      dbPassword: dbPassword ?? this.dbPassword,
+    );
+  }
+}
+
+class ClientMessageTemplateSettings {
+  const ClientMessageTemplateSettings({
+    this.ptTemplate = defaultPtTemplate,
+    this.esTemplate = defaultEsTemplate,
+    this.enTemplate = defaultEnTemplate,
+  });
+
+  static const String defaultPtTemplate = 'Olá {client_name}!\n'
+      'Suas fotos estão prontas.\n'
+      'Link: {gallery_link}\n'
+      'Código: {access_code}\n'
+      '{payment_details}\n'
+      'Fotógrafo: {photographer_name}';
+  static const String defaultEsTemplate = 'Hola {client_name}!\n'
+      'Tus fotos están listas.\n'
+      'Enlace: {gallery_link}\n'
+      'Código: {access_code}\n'
+      '{payment_details}\n'
+      'Fotógrafo: {photographer_name}';
+  static const String defaultEnTemplate = 'Hello {client_name}!\n'
+      'Your photos are ready.\n'
+      'Link: {gallery_link}\n'
+      'Code: {access_code}\n'
+      '{payment_details}\n'
+      'Photographer: {photographer_name}';
+
+  final String ptTemplate;
+  final String esTemplate;
+  final String enTemplate;
+
+  String templateForLanguage(String languageCode) {
+    switch (languageCode.trim().toLowerCase()) {
+      case 'es':
+        return esTemplate;
+      case 'en':
+        return enTemplate;
+      case 'pt':
+      case 'pt-br':
+      default:
+        return ptTemplate;
+    }
+  }
+
+  ClientMessageTemplateSettings copyWith({
+    String? ptTemplate,
+    String? esTemplate,
+    String? enTemplate,
+  }) {
+    return ClientMessageTemplateSettings(
+      ptTemplate: ptTemplate ?? this.ptTemplate,
+      esTemplate: esTemplate ?? this.esTemplate,
+      enTemplate: enTemplate ?? this.enTemplate,
+    );
+  }
+
+  ClientMessageTemplateSettings copyWithLanguageTemplate({
+    required String languageCode,
+    required String template,
+  }) {
+    switch (languageCode.trim().toLowerCase()) {
+      case 'es':
+        return copyWith(esTemplate: template);
+      case 'en':
+        return copyWith(enTemplate: template);
+      case 'pt':
+      case 'pt-br':
+      default:
+        return copyWith(ptTemplate: template);
+    }
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'pt': ptTemplate,
+      'es': esTemplate,
+      'en': enTemplate,
+    };
+  }
+}
+
 class AppDeliverySettings {
   const AppDeliverySettings({
     required this.wifiOnly,
@@ -664,6 +945,12 @@ class DeliveryHistoryEntry {
     required this.photoCount,
     required this.totalAmountCents,
     required this.createdAt,
+    this.comboName = '',
+    this.unitPriceCents = 0,
+    this.databaseCode = '',
+    this.databaseCodeExpiresAt,
+    this.saleDate,
+    this.photoFileNames = const [],
   });
 
   final String id;
@@ -677,6 +964,14 @@ class DeliveryHistoryEntry {
   final int photoCount;
   final int totalAmountCents;
   final DateTime createdAt;
+  final String comboName;
+  final int unitPriceCents;
+  final String databaseCode;
+  final DateTime? databaseCodeExpiresAt;
+  final DateTime? saleDate;
+  final List<String> photoFileNames;
+
+  DateTime get effectiveSaleDate => saleDate ?? createdAt;
 
   Map<String, dynamic> toJson() {
     return {
@@ -691,11 +986,20 @@ class DeliveryHistoryEntry {
       'photoCount': photoCount,
       'totalAmountCents': totalAmountCents,
       'createdAt': createdAt.toIso8601String(),
+      'comboName': comboName,
+      'unitPriceCents': unitPriceCents,
+      'databaseCode': databaseCode,
+      'databaseCodeExpiresAt': databaseCodeExpiresAt?.toIso8601String(),
+      'saleDate': saleDate?.toIso8601String(),
+      'photoFileNames': photoFileNames,
     };
   }
 
   factory DeliveryHistoryEntry.fromJson(Map<String, dynamic> json) {
     final rawCreatedAt = json['createdAt'] as String?;
+    final rawDatabaseCodeExpiresAt = json['databaseCodeExpiresAt'] as String?;
+    final rawSaleDate = json['saleDate'] as String?;
+    final rawPhotoFileNames = json['photoFileNames'];
     return DeliveryHistoryEntry(
       id: json['id'] as String? ?? '',
       orderId: json['orderId'] as String? ?? '',
@@ -712,6 +1016,19 @@ class DeliveryHistoryEntry {
           ? DateTime.fromMillisecondsSinceEpoch(0)
           : DateTime.tryParse(rawCreatedAt) ??
               DateTime.fromMillisecondsSinceEpoch(0),
+      comboName: json['comboName'] as String? ?? '',
+      unitPriceCents: (json['unitPriceCents'] as num?)?.toInt() ?? 0,
+      databaseCode: json['databaseCode'] as String? ?? '',
+      databaseCodeExpiresAt: rawDatabaseCodeExpiresAt == null
+          ? null
+          : DateTime.tryParse(rawDatabaseCodeExpiresAt),
+      saleDate: rawSaleDate == null ? null : DateTime.tryParse(rawSaleDate),
+      photoFileNames: rawPhotoFileNames is List
+          ? rawPhotoFileNames
+              .map((item) => item.toString().trim())
+              .where((item) => item.isNotEmpty)
+              .toList(growable: false)
+          : const [],
     );
   }
 }
@@ -761,4 +1078,3 @@ class PictureComboPricing {
     );
   }
 }
-
