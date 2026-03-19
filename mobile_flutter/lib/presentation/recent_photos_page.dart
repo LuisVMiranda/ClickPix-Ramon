@@ -1,7 +1,8 @@
-﻿import 'dart:io';
+import 'dart:io';
 import 'dart:async';
 import 'dart:math';
 
+import 'package:clickpix_ramon/core/delivery/delivery_share_service.dart';
 import 'package:clickpix_ramon/core/i18n/ui_text.dart';
 import 'package:clickpix_ramon/core/payments/payment_integration_client.dart';
 import 'package:clickpix_ramon/core/payments/pix_payload.dart';
@@ -10,6 +11,7 @@ import 'package:clickpix_ramon/data/local/app_database.dart';
 import 'package:clickpix_ramon/data/repositories/local_client_repository.dart';
 import 'package:clickpix_ramon/data/repositories/local_order_repository.dart';
 import 'package:clickpix_ramon/data/repositories/local_photo_asset_repository.dart';
+import 'package:clickpix_ramon/data/services/remote_upload_sync_gateway.dart';
 import 'package:clickpix_ramon/data/services/upload_queue_service.dart';
 import 'package:clickpix_ramon/data/services/upload_worker.dart';
 import 'package:clickpix_ramon/domain/entities/order.dart' as domain;
@@ -67,6 +69,7 @@ class _RecentPhotosPageState extends State<RecentPhotosPage> {
   static const int _allPhotosChunkSize = 90;
 
   late final LocalOrderRepository _orderRepository;
+  late final DeliveryShareService _deliveryShareService;
   late final UploadQueueService _uploadQueueService;
   late final LocalPhotoAssetRepository _photoRepository;
   late final LocalClientRepository _clientRepository;
@@ -97,12 +100,17 @@ class _RecentPhotosPageState extends State<RecentPhotosPage> {
     super.initState();
     _unitPriceController = TextEditingController(text: '15.00');
     _unitPriceController.addListener(_onUnitPriceChanged);
+    final settingsStore = AppSettingsStore(widget.database);
     _uploadQueueService = UploadQueueService(
       database: widget.database,
-      settingsStore: AppSettingsStore(widget.database),
+      settingsStore: settingsStore,
       networkConstraint: ConnectivityNetworkConstraint(Connectivity()),
-      syncGateway: const NoopUploadSyncGateway(),
+      syncGateway: RemoteUploadSyncGateway(
+        database: widget.database,
+        settingsStore: settingsStore,
+      ),
     );
+    _deliveryShareService = DeliveryShareService(widget.database);
     _orderRepository = LocalOrderRepository(
       widget.database,
       uploadQueueService: _uploadQueueService,
@@ -924,9 +932,10 @@ class _RecentPhotosPageState extends State<RecentPhotosPage> {
   Future<String?> _evaluateCloudUploadFallback() async {
     final webAccessSettings =
         await widget.settingsStore.loadDeliveryWebAccessSettings();
-    final hasValidUrl = _hasValidWebAccessUrl(webAccessSettings.baseDomainUrl);
-    final hasDbCredentials = webAccessSettings.dbUsername.trim().isNotEmpty &&
-        webAccessSettings.dbPassword.trim().isNotEmpty;
+    final paymentIntegration =
+        await widget.settingsStore.loadPaymentIntegrationSettings();
+    final hasValidUrl = _hasValidWebAccessUrl(webAccessSettings.baseDomainUrl) ||
+        _hasValidWebAccessUrl(paymentIntegration.apiBaseUrl);
 
     UploadQueueProcessResult queueResult;
     try {
@@ -937,27 +946,27 @@ class _RecentPhotosPageState extends State<RecentPhotosPage> {
       }
       return tr(
         context,
-        pt: 'Upload na nuvem falhou, mas a venda e o envio est\u00e3o liberados por WhatsApp/e-mail.',
-        es: 'La subida a la nube fall\u00f3, pero la venta y el env\u00edo est\u00e1n habilitados por WhatsApp/correo.',
-        en: 'Cloud upload failed, but the sale and dispatch are still enabled via WhatsApp/email.',
+        pt: 'A sincronizacao com a nuvem falhou. A cobranca ainda pode ser enviada, mas o portal ficara pendente ate uma nova sincronizacao.',
+        es: 'La sincronizacion en la nube fallo. El cobro todavia se puede enviar, pero el portal quedara pendiente hasta una nueva sincronizacion.',
+        en: 'Cloud sync failed. You can still send the checkout message, but the portal will stay pending until sync succeeds.',
       );
     }
 
-    if (!hasValidUrl || !hasDbCredentials) {
+    if (!hasValidUrl) {
       return tr(
         context,
-        pt: 'Upload na nuvem n\u00e3o conclu\u00eddo: configure URL e credenciais em Configura\u00e7\u00f5es > Acesso web e banco do site.',
-        es: 'Subida a la nube no completada: configura URL y credenciales en Configuraci\u00f3n > Acceso web y base de datos.',
-        en: 'Cloud upload not completed: configure URL and credentials in Settings > Website access and database.',
+        pt: 'Sincronizacao em nuvem nao concluida: configure a URL do backend em Configuracoes > Acesso web e banco do site ou em Integracao Pix.',
+        es: 'Sincronizacion en la nube no completada: configura la URL del backend en Configuracion > Acceso web y base de datos o en Integracion Pix.',
+        en: 'Cloud sync not completed: configure the backend URL in Settings > Website access and database or in Pix integration.',
       );
     }
 
     if (queueResult.blockedByNetwork) {
       return tr(
         context,
-        pt: 'Upload na nuvem pendente por restri\u00e7\u00e3o de rede. O envio ao cliente segue dispon\u00edvel.',
-        es: 'Subida a la nube pendiente por restricci\u00f3n de red. El env\u00edo al cliente sigue disponible.',
-        en: 'Cloud upload is pending due to network restrictions. Client delivery is still available.',
+        pt: 'A sincronizacao em nuvem ficou pendente por restricao de rede. A mensagem ao cliente segue disponivel.',
+        es: 'La sincronizacion en la nube quedo pendiente por restriccion de red. El mensaje al cliente sigue disponible.',
+        en: 'Cloud sync is pending due to network restrictions. The client message is still available.',
       );
     }
 
@@ -984,6 +993,13 @@ class _RecentPhotosPageState extends State<RecentPhotosPage> {
     );
   }
 
+  Future<OrderRemoteState> _loadRemoteOrderState(String orderId) async {
+    final row = await (widget.database.select(widget.database.orders)
+          ..where((tbl) => tbl.id.equals(orderId)))
+        .getSingleOrNull();
+    return OrderRemoteState.fromStorage(row?.providerDataJson);
+  }
+
   Future<void> _showDeliveryActions({
     required ClientSummary client,
     required domain.Order order,
@@ -994,18 +1010,25 @@ class _RecentPhotosPageState extends State<RecentPhotosPage> {
     final webAccessSettings =
         await widget.settingsStore.loadDeliveryWebAccessSettings();
     final deliverySettings = await widget.settingsStore.loadDeliverySettings();
+    final paymentIntegration =
+        await widget.settingsStore.loadPaymentIntegrationSettings();
+    final remoteState = await _loadRemoteOrderState(order.id);
     final link = _buildGalleryLink(webAccessSettings, order.id);
-    final code = (100000 + Random().nextInt(900000)).toString();
-    final accessCodeExpiresAt = saleDate.add(
-      Duration(days: deliverySettings.accessCodeValidityDays),
-    );
+    final fallbackCode = (100000 + Random().nextInt(900000)).toString();
+    final code = remoteState.deliveryState?.hasAccessCode == true
+        ? remoteState.deliveryState!.accessCode!.trim()
+        : fallbackCode;
+    final accessCodeExpiresAt = DateTime.tryParse(
+          remoteState.deliveryState?.expiresAt ?? '',
+        ) ??
+        saleDate.add(
+          Duration(days: deliverySettings.accessCodeValidityDays),
+        );
     final currency = _toCurrency(order.totalAmountCents);
     final isPixPayment = widget.requirePayment &&
         _selectedPaymentChoice == DeliveryPaymentChoice.pix;
-
-    final paymentIntegration = isPixPayment
-        ? await widget.settingsStore.loadPaymentIntegrationSettings()
-        : const PaymentIntegrationSettings();
+    final isPayPalPayment = widget.requirePayment &&
+        _selectedPaymentChoice == DeliveryPaymentChoice.paypal;
 
     final localPixPayload = isPixPayment
         ? PixPayload.build(
@@ -1019,61 +1042,65 @@ class _RecentPhotosPageState extends State<RecentPhotosPage> {
         : '';
 
     var pixPayload = localPixPayload;
-    PaymentChargeSession? pixSession;
+    final remotePaymentSession = remoteState.paymentSession;
     var pixSourceHint = '';
+    var paypalSourceHint = '';
 
-    if (isPixPayment && paymentIntegration.isApiEnabled) {
-      final integrationClient = PaymentIntegrationClient();
-      try {
-        pixSession = await integrationClient.createPixCharge(
-          settings: paymentIntegration,
-          orderId: order.id,
-          txid: order.id,
-          amountCents: order.totalAmountCents,
-          pixKey: businessProfile.photographerPixKey,
-          payerName: client.name,
-          payerWhatsapp: client.whatsapp,
-          payerEmail: client.email ?? '',
-          description: 'Pedido ${order.id}',
-        );
-      } on Object {
-        pixSession = null;
-      }
-
-      if (pixSession != null && pixSession.pixCode.trim().isNotEmpty) {
-        pixPayload = pixSession.pixCode.trim();
-        pixSourceHint = tr(
-          context,
-          pt: 'QR Pix obtido pela API do banco/provedor selecionado.',
-          es: 'QR Pix obtenido por la API del banco/proveedor seleccionado.',
-          en: 'Pix QR obtained from the selected bank/provider API.',
-        );
-      } else if (localPixPayload.isNotEmpty) {
-        pixSourceHint = tr(
-          context,
-          pt: 'API indispon\u00edvel no momento. Usando QR Pix local.',
-          es: 'API no disponible en este momento. Usando QR Pix local.',
-          en: 'API unavailable right now. Using local Pix QR.',
-        );
-      }
+    if (isPixPayment &&
+        remotePaymentSession?.pixCode != null &&
+        remotePaymentSession!.pixCode!.trim().isNotEmpty) {
+      pixPayload = remotePaymentSession.pixCode!.trim();
+      pixSourceHint = tr(
+        context,
+        pt: 'QR Pix sincronizado pelo backend de pagamento.',
+        es: 'QR Pix sincronizado por el backend de pagos.',
+        en: 'Pix QR synced from the payment backend.',
+      );
     } else if (isPixPayment && localPixPayload.isNotEmpty) {
       pixSourceHint = tr(
         context,
-        pt: 'QR Pix local gerado pelo app.',
-        es: 'QR Pix local generado por la app.',
+        pt: paymentIntegration.isPixApiEnabled
+            ? 'Checkout remoto ainda esta pendente. Use o QR local enquanto a API conclui a sessao.'
+            : 'QR Pix local gerado pelo app.',
+        es: paymentIntegration.isPixApiEnabled
+            ? 'El checkout remoto aun esta pendiente. Usa el QR local mientras la API completa la sesion.'
+            : 'QR Pix local generado por la app.',
         en: 'Local Pix QR generated by the app.',
       );
     }
+
+    if (isPayPalPayment &&
+        remotePaymentSession?.isPayPal == true &&
+        (remotePaymentSession?.checkoutUrl?.trim().isNotEmpty ?? false)) {
+      paypalSourceHint = tr(
+        context,
+        pt: 'Checkout PayPal sincronizado pelo backend.',
+        es: 'Checkout PayPal sincronizado por el backend.',
+        en: 'PayPal checkout synced from the backend.',
+      );
+    }
+
+    final paymentUnlockHint = widget.requirePayment
+        ? tr(
+            context,
+            pt: 'Link e codigo sao liberados automaticamente assim que o pagamento for confirmado.',
+            es: 'El enlace y el codigo se liberan automaticamente cuando se confirma el pago.',
+            en: 'The link and code unlock automatically as soon as payment is confirmed.',
+          )
+        : '';
 
     final paymentDetails = widget.requirePayment
         ? switch (_selectedPaymentChoice) {
             DeliveryPaymentChoice.pix =>
               '${tr(context, pt: 'Pagamento', es: 'Pago', en: 'Payment')}: ${_selectedPaymentChoice.label(context)} ($currency)\n'
                   'Pix: ${businessProfile.photographerPixKey.isEmpty ? tr(context, pt: 'N\u00e3o informado', es: 'No informado', en: 'Not provided') : businessProfile.photographerPixKey}'
-                  '${pixSourceHint.isEmpty ? '' : '\n$pixSourceHint'}',
+                  '${pixSourceHint.isEmpty ? '' : '\n$pixSourceHint'}'
+                  '${paymentUnlockHint.isEmpty ? '' : '\n$paymentUnlockHint'}',
             DeliveryPaymentChoice.paypal =>
               '${tr(context, pt: 'Pagamento', es: 'Pago', en: 'Payment')}: ${_selectedPaymentChoice.label(context)} ($currency)\n'
-                  'PayPal: ${businessProfile.photographerPaypal.isEmpty ? tr(context, pt: 'N\u00e3o informado', es: 'No informado', en: 'Not provided') : businessProfile.photographerPaypal}',
+                  'PayPal: ${businessProfile.photographerPaypal.isEmpty ? tr(context, pt: 'N\u00e3o informado', es: 'No informado', en: 'Not provided') : businessProfile.photographerPaypal}'
+                  '${paypalSourceHint.isEmpty ? '' : '\n$paypalSourceHint'}'
+                  '${paymentUnlockHint.isEmpty ? '' : '\n$paymentUnlockHint'}',
           }
         : tr(
             context,
@@ -1109,177 +1136,382 @@ class _RecentPhotosPageState extends State<RecentPhotosPage> {
         'order_id': order.id,
       },
     );
+    final historyEntryId = 'dispatch_${order.id}';
+
+    await _saveHistory(
+      client,
+      order,
+      'prepared',
+      historyEntryId: historyEntryId,
+      message: message,
+      accessCode: code,
+      accessCodeExpiresAt: accessCodeExpiresAt,
+      saleDate: saleDate,
+      createdAt: saleDate,
+    );
 
     if (!mounted) {
       return;
-    }
-
-    var markedAsPaid = false;
-    Future<void> markAsPaid() async {
-      if (markedAsPaid) {
-        return;
-      }
-      markedAsPaid = true;
-      await _orderRepository.updateOrderStatus(
-          order.id, domain.OrderStatus.paid);
     }
 
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: EdgeInsets.only(
-              left: 16,
-              right: 16,
-              top: 16,
-              bottom: MediaQuery.viewInsetsOf(context).bottom + 16,
-            ),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                      tr(
-                        context,
-                        pt: 'A\u00e7\u00f5es de envio',
-                        es: 'Acciones de env\u00edo',
-                        en: 'Dispatch actions',
-                      ),
-                      style: Theme.of(context).textTheme.titleLarge),
-                  const SizedBox(height: 8),
-                  Text(
-                      '${tr(context, pt: 'Cliente', es: 'Cliente', en: 'Client')}: ${client.name}'),
-                  Text('Link: $link'),
-                  Text(
-                      '${tr(context, pt: 'C\u00f3digo', es: 'C\u00f3digo', en: 'Code')}: $code'),
-                  if (widget.requirePayment)
-                    Text(
-                      '${tr(context, pt: 'Pagamento', es: 'Pago', en: 'Payment')}: ${_selectedPaymentChoice.label(context)} ($currency)',
-                    ),
-                  if (cloudUploadWarning != null &&
-                      cloudUploadWarning.trim().isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
-                        color: Theme.of(context).colorScheme.errorContainer,
-                      ),
-                      child: Text(
-                        cloudUploadWarning,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onErrorContainer,
-                        ),
-                      ),
-                    ),
-                  ],
-                  if (_selectedPaymentChoice == DeliveryPaymentChoice.paypal &&
-                      widget.requirePayment)
-                    Text(
-                      '${tr(context, pt: 'Conta PayPal', es: 'Cuenta PayPal', en: 'PayPal account')}: ${businessProfile.photographerPaypal.isEmpty ? tr(context, pt: 'N\u00e3o informada', es: 'No informada', en: 'Not provided') : businessProfile.photographerPaypal}',
-                    ),
-                  if (_selectedPaymentChoice == DeliveryPaymentChoice.pix &&
-                      widget.requirePayment) ...[
-                    const SizedBox(height: 12),
-                    _PixPaymentCard(
-                      payload: pixPayload,
-                      sourceHint: pixSourceHint,
-                      paymentIntegration: paymentIntegration,
-                      session: pixSession,
-                      onPaid: markAsPaid,
-                    ),
-                  ],
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: client.whatsapp.isEmpty
-                          ? null
-                          : () async {
-                              await _sendViaWhatsApp(client.whatsapp, message);
-                              await _saveHistory(
-                                client,
-                                order,
-                                'whatsapp',
-                                accessCode: code,
-                                accessCodeExpiresAt: accessCodeExpiresAt,
-                                saleDate: saleDate,
-                              );
-                              if (context.mounted) {
-                                Navigator.of(context).pop();
-                              }
-                            },
-                      icon: const Icon(Icons.chat),
-                      label: Text(
+        var activeAction = '';
+        var paymentUnlocked = !widget.requirePayment ||
+            _isPaidOrderStatus(remotePaymentSession?.status ?? '');
+
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            Future<void> markAsPaid() async {
+              if (paymentUnlocked) {
+                return;
+              }
+              await _orderRepository.updateOrderStatus(
+                order.id,
+                domain.OrderStatus.paid,
+              );
+              if (context.mounted) {
+                setModalState(() => paymentUnlocked = true);
+              }
+            }
+
+            Future<void> runModalAction(
+              String action,
+              Future<void> Function() callback,
+            ) async {
+              if (activeAction.isNotEmpty) {
+                return;
+              }
+              setModalState(() => activeAction = action);
+              try {
+                await callback();
+              } finally {
+                if (context.mounted) {
+                  setModalState(() => activeAction = '');
+                }
+              }
+            }
+
+            final whatsappBusy = activeAction == 'whatsapp';
+            final emailBusy = activeAction == 'email';
+            final copyBusy = activeAction == 'copy';
+            final chatBusy = activeAction == 'chat';
+            final canShareFiles = !widget.requirePayment || paymentUnlocked;
+            final actionHint = canShareFiles
+                ? tr(
+                    context,
+                    pt: 'As fotos serao anexadas ao WhatsApp ou e-mail. Se a legenda nao aparecer no WhatsApp, use Copiar mensagem.',
+                    es: 'Las fotos se adjuntaran a WhatsApp o correo. Si el texto no aparece en WhatsApp, usa Copiar mensaje.',
+                    en: 'Photos will be attached in WhatsApp or email. If the caption does not appear in WhatsApp, use Copy message.',
+                  )
+                : tr(
+                    context,
+                    pt: 'Enquanto o pagamento nao for confirmado, o app envia apenas a cobranca e o link protegido do portal. As fotos completas ficam disponiveis depois da confirmacao.',
+                    es: 'Mientras el pago no este confirmado, la app envia solo el cobro y el enlace protegido del portal. Las fotos completas quedan disponibles despues de la confirmacion.',
+                    en: 'Until payment is confirmed, the app sends only the charge message and the protected portal link. Full photos become available after confirmation.',
+                  );
+
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  top: 16,
+                  bottom: MediaQuery.viewInsetsOf(context).bottom + 16,
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
                         tr(
                           context,
-                          pt: 'Enviar por WhatsApp',
-                          es: 'Enviar por WhatsApp',
-                          en: 'Send via WhatsApp',
+                          pt: 'A\u00e7\u00f5es de envio',
+                          es: 'Acciones de env\u00edo',
+                          en: 'Dispatch actions',
                         ),
+                        style: Theme.of(context).textTheme.titleLarge,
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: client.email == null || client.email!.isEmpty
-                          ? null
-                          : () async {
-                              await _sendViaEmail(client.email!, message);
-                              await _saveHistory(
-                                client,
-                                order,
-                                'email',
-                                accessCode: code,
-                                accessCodeExpiresAt: accessCodeExpiresAt,
-                                saleDate: saleDate,
-                              );
-                              if (context.mounted) {
-                                Navigator.of(context).pop();
-                              }
-                            },
-                      icon: const Icon(Icons.email),
-                      label: Text(
+                      const SizedBox(height: 8),
+                      Text(
+                        '${tr(context, pt: 'Cliente', es: 'Cliente', en: 'Client')}: ${client.name}',
+                      ),
+                      Text('Link: $link'),
+                      Text(
+                        '${tr(context, pt: 'C\u00f3digo', es: 'C\u00f3digo', en: 'Code')}: $code',
+                      ),
+                      Text(
+                        '${tr(context, pt: 'Fotos selecionadas', es: 'Fotos seleccionadas', en: 'Selected photos')}: ${order.itemIds.length}',
+                      ),
+                      if (widget.requirePayment)
+                        Text(
+                          '${tr(context, pt: 'Pagamento', es: 'Pago', en: 'Payment')}: ${_selectedPaymentChoice.label(context)} ($currency)',
+                        ),
+                      if (cloudUploadWarning != null &&
+                          cloudUploadWarning.trim().isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            color: Theme.of(context).colorScheme.errorContainer,
+                          ),
+                          child: Text(
+                            cloudUploadWarning,
+                            style: TextStyle(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onErrorContainer,
+                            ),
+                          ),
+                        ),
+                      ],
+                      if (_selectedPaymentChoice ==
+                              DeliveryPaymentChoice.paypal &&
+                          widget.requirePayment) ...[
+                        const SizedBox(height: 12),
+                        _PayPalPaymentCard(
+                          orderId: order.id,
+                          paymentIntegration: paymentIntegration,
+                          session: remotePaymentSession?.isPayPal == true
+                              ? remotePaymentSession
+                              : null,
+                          paypalAccount: businessProfile.photographerPaypal,
+                          sourceHint: paypalSourceHint,
+                          onPaid: markAsPaid,
+                        ),
+                      ],
+                      if (_selectedPaymentChoice == DeliveryPaymentChoice.pix &&
+                          widget.requirePayment) ...[
+                        const SizedBox(height: 12),
+                        _PixPaymentCard(
+                          orderId: order.id,
+                          payload: pixPayload,
+                          sourceHint: pixSourceHint,
+                          paymentIntegration: paymentIntegration,
+                          session: isPixPayment ? remotePaymentSession : null,
+                          onPaid: markAsPaid,
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+                      Text(
                         tr(
                           context,
-                          pt: 'Enviar por e-mail',
-                          es: 'Enviar por correo',
-                          en: 'Send via email',
+                          pt: 'Mensagem pronta',
+                          es: 'Mensaje listo',
+                          en: 'Ready message',
+                        ),
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 4),
+                      SelectableText(message),
+                      const SizedBox(height: 6),
+                      Text(
+                        actionHint,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: client.whatsapp.isEmpty
+                              ? null
+                              : () => runModalAction('whatsapp', () async {
+                                    if (canShareFiles) {
+                                      await _shareViaWhatsApp(
+                                        modalContext: context,
+                                        client: client,
+                                        order: order,
+                                        historyEntryId: historyEntryId,
+                                        message: message,
+                                        accessCode: code,
+                                        accessCodeExpiresAt:
+                                            accessCodeExpiresAt,
+                                        saleDate: saleDate,
+                                      );
+                                    } else {
+                                      await _sendMessageViaWhatsApp(
+                                        context,
+                                        client.whatsapp,
+                                        message,
+                                      );
+                                    }
+                                    if (context.mounted) {
+                                      Navigator.of(context).pop();
+                                    }
+                                  }),
+                          icon: whatsappBusy
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.chat),
+                          label: Text(
+                            tr(
+                              context,
+                              pt: canShareFiles
+                                  ? 'Enviar fotos no WhatsApp'
+                                  : 'Enviar cobranca no WhatsApp',
+                              es: canShareFiles
+                                  ? 'Enviar fotos por WhatsApp'
+                                  : 'Enviar cobro por WhatsApp',
+                              en: canShareFiles
+                                  ? 'Send photos on WhatsApp'
+                                  : 'Send charge on WhatsApp',
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () async {
-                        await Clipboard.setData(ClipboardData(text: message));
-                        if (context.mounted) {
-                          Navigator.of(context).pop();
-                        }
-                      },
-                      icon: const Icon(Icons.copy),
-                      label: Text(
-                        tr(
-                          context,
-                          pt: 'Copiar mensagem',
-                          es: 'Copiar mensaje',
-                          en: 'Copy message',
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: client.email == null ||
+                                  client.email!.isEmpty
+                              ? null
+                              : () => runModalAction('email', () async {
+                                    if (canShareFiles) {
+                                      await _shareViaEmail(
+                                        modalContext: context,
+                                        client: client,
+                                        order: order,
+                                        historyEntryId: historyEntryId,
+                                        email: client.email!,
+                                        message: message,
+                                        accessCode: code,
+                                        accessCodeExpiresAt:
+                                            accessCodeExpiresAt,
+                                        saleDate: saleDate,
+                                      );
+                                    } else {
+                                      await _sendMessageViaEmail(
+                                        context,
+                                        client.email!,
+                                        message,
+                                      );
+                                    }
+                                    if (context.mounted) {
+                                      Navigator.of(context).pop();
+                                    }
+                                  }),
+                          icon: emailBusy
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.email),
+                          label: Text(
+                            tr(
+                              context,
+                              pt: canShareFiles
+                                  ? 'Enviar fotos por e-mail'
+                                  : 'Enviar cobranca por e-mail',
+                              es: canShareFiles
+                                  ? 'Enviar fotos por correo'
+                                  : 'Enviar cobro por correo',
+                              en: canShareFiles
+                                  ? 'Send photos by email'
+                                  : 'Send charge by email',
+                            ),
+                          ),
                         ),
                       ),
-                    ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: copyBusy
+                              ? null
+                              : () => runModalAction('copy', () async {
+                                    await _copyMessageToClipboard(
+                                      context,
+                                      message,
+                                    );
+                                  }),
+                          icon: copyBusy
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.copy),
+                          label: Text(
+                            tr(
+                              context,
+                              pt: 'Copiar mensagem',
+                              es: 'Copiar mensaje',
+                              en: 'Copy message',
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: client.whatsapp.isEmpty
+                              ? null
+                              : () => runModalAction('chat', () async {
+                                    await _openWhatsAppChat(
+                                      context,
+                                      client.whatsapp,
+                                    );
+                                  }),
+                          icon: chatBusy
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.open_in_new),
+                          label: Text(
+                            tr(
+                              context,
+                              pt: 'Abrir chat do cliente',
+                              es: 'Abrir chat del cliente',
+                              en: 'Open client chat',
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: TextButton.icon(
+                          onPressed: activeAction.isNotEmpty
+                              ? null
+                              : () => Navigator.of(context).pop(),
+                          icon: const Icon(Icons.close),
+                          label: Text(
+                            tr(
+                              context,
+                              pt: 'Fechar',
+                              es: 'Cerrar',
+                              en: 'Close',
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );
@@ -1289,16 +1521,19 @@ class _RecentPhotosPageState extends State<RecentPhotosPage> {
     ClientSummary client,
     domain.Order order,
     String channel, {
+    required String historyEntryId,
+    required String message,
     required String accessCode,
     required DateTime accessCodeExpiresAt,
     required DateTime saleDate,
+    DateTime? createdAt,
   }) async {
     final pricing = _calculatePricing(order.itemIds.length);
     final comboLabel = pricing.combo?.name;
     final photoFileNames = _resolvePhotoFileNames(order.itemIds);
     await widget.settingsStore.appendDeliveryHistory(
       DeliveryHistoryEntry(
-        id: 'log_${DateTime.now().microsecondsSinceEpoch}',
+        id: historyEntryId,
         orderId: order.id,
         clientName: client.name,
         clientWhatsapp: client.whatsapp,
@@ -1319,13 +1554,14 @@ class _RecentPhotosPageState extends State<RecentPhotosPage> {
               ),
         photoCount: order.itemIds.length,
         totalAmountCents: order.totalAmountCents,
-        createdAt: DateTime.now(),
+        createdAt: createdAt ?? saleDate,
         comboName: comboLabel ?? '',
         unitPriceCents: pricing.unitPriceCents,
         databaseCode: accessCode,
         databaseCodeExpiresAt: accessCodeExpiresAt,
         saleDate: saleDate,
         photoFileNames: photoFileNames,
+        clientMessage: message,
       ),
     );
     widget.onDeliveryRegistered?.call();
@@ -1358,19 +1594,290 @@ class _RecentPhotosPageState extends State<RecentPhotosPage> {
     return names.take(120).toList(growable: false);
   }
 
-  Future<void> _sendViaWhatsApp(String phone, String message) async {
-    final normalizedPhone = phone.replaceAll(RegExp(r'\D'), '');
-    final encodedMessage = Uri.encodeComponent(message);
-    final uri =
-        Uri.parse('https://wa.me/$normalizedPhone?text=$encodedMessage');
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  Future<void> _shareViaWhatsApp({
+    required BuildContext modalContext,
+    required ClientSummary client,
+    required domain.Order order,
+    required String historyEntryId,
+    required String message,
+    required String accessCode,
+    required DateTime accessCodeExpiresAt,
+    required DateTime saleDate,
+  }) async {
+    try {
+      final resolved = await _deliveryShareService.shareOrderViaWhatsApp(
+        orderId: order.id,
+        message: message,
+      );
+      await _saveHistory(
+        client,
+        order,
+        'whatsapp',
+        historyEntryId: historyEntryId,
+        message: message,
+        accessCode: accessCode,
+        accessCodeExpiresAt: accessCodeExpiresAt,
+        saleDate: saleDate,
+        createdAt: saleDate,
+      );
+      if (!modalContext.mounted) {
+        return;
+      }
+      _showShareFeedback(
+        modalContext,
+        baseMessage: tr(
+          modalContext,
+          pt: 'WhatsApp aberto com fotos anexadas.',
+          es: 'WhatsApp abierto con fotos adjuntas.',
+          en: 'WhatsApp opened with attached photos.',
+        ),
+        resolved: resolved,
+      );
+    } on DeliveryShareException {
+      if (!modalContext.mounted) {
+        return;
+      }
+      _showActionSnackBar(
+        modalContext,
+        tr(
+          modalContext,
+          pt: 'N\u00e3o foi poss\u00edvel localizar as fotos desta venda para compartilhar.',
+          es: 'No se pudieron localizar las fotos de esta venta para compartir.',
+          en: 'Could not find this sale photos to share.',
+        ),
+      );
+    } on Object {
+      if (!modalContext.mounted) {
+        return;
+      }
+      _showActionSnackBar(
+        modalContext,
+        tr(
+          modalContext,
+          pt: 'N\u00e3o foi poss\u00edvel abrir o WhatsApp com anexos agora.',
+          es: 'No se pudo abrir WhatsApp con adjuntos ahora.',
+          en: 'Could not open WhatsApp with attachments now.',
+        ),
+      );
+    }
   }
 
-  Future<void> _sendViaEmail(String email, String message) async {
+  Future<void> _shareViaEmail({
+    required BuildContext modalContext,
+    required ClientSummary client,
+    required domain.Order order,
+    required String historyEntryId,
+    required String email,
+    required String message,
+    required String accessCode,
+    required DateTime accessCodeExpiresAt,
+    required DateTime saleDate,
+  }) async {
+    try {
+      final resolved = await _deliveryShareService.shareOrderViaEmail(
+        orderId: order.id,
+        email: email,
+        message: message,
+      );
+      await _saveHistory(
+        client,
+        order,
+        'email',
+        historyEntryId: historyEntryId,
+        message: message,
+        accessCode: accessCode,
+        accessCodeExpiresAt: accessCodeExpiresAt,
+        saleDate: saleDate,
+        createdAt: saleDate,
+      );
+      if (!modalContext.mounted) {
+        return;
+      }
+      _showShareFeedback(
+        modalContext,
+        baseMessage: tr(
+          modalContext,
+          pt: 'Compositor de e-mail aberto com fotos anexadas.',
+          es: 'Compositor de correo abierto con fotos adjuntas.',
+          en: 'Email composer opened with attached photos.',
+        ),
+        resolved: resolved,
+      );
+    } on DeliveryShareException {
+      if (!modalContext.mounted) {
+        return;
+      }
+      _showActionSnackBar(
+        modalContext,
+        tr(
+          modalContext,
+          pt: 'N\u00e3o foi poss\u00edvel localizar as fotos desta venda para compartilhar.',
+          es: 'No se pudieron localizar las fotos de esta venta para compartir.',
+          en: 'Could not find this sale photos to share.',
+        ),
+      );
+    } on Object {
+      if (!modalContext.mounted) {
+        return;
+      }
+      _showActionSnackBar(
+        modalContext,
+        tr(
+          modalContext,
+          pt: 'N\u00e3o foi poss\u00edvel abrir o e-mail com anexos agora.',
+          es: 'No se pudo abrir el correo con adjuntos ahora.',
+          en: 'Could not open email with attachments now.',
+        ),
+      );
+    }
+  }
+
+  Future<void> _sendMessageViaWhatsApp(
+    BuildContext modalContext,
+    String phone,
+    String message,
+  ) async {
+    final normalizedPhone = phone.replaceAll(RegExp(r'\D'), '');
+    if (normalizedPhone.isEmpty) {
+      _showActionSnackBar(
+        modalContext,
+        tr(
+          modalContext,
+          pt: 'Informe um WhatsApp valido para enviar a cobranca.',
+          es: 'Ingresa un WhatsApp valido para enviar el cobro.',
+          en: 'Provide a valid WhatsApp number to send the charge.',
+        ),
+      );
+      return;
+    }
+
+    final encodedMessage = Uri.encodeComponent(message);
+    final uri = Uri.parse('https://wa.me/$normalizedPhone?text=$encodedMessage');
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!modalContext.mounted) {
+      return;
+    }
+    if (!opened) {
+      _showActionSnackBar(
+        modalContext,
+        tr(
+          modalContext,
+          pt: 'Nao foi possivel abrir o WhatsApp agora.',
+          es: 'No se pudo abrir WhatsApp ahora.',
+          en: 'Could not open WhatsApp right now.',
+        ),
+      );
+    }
+  }
+
+  Future<void> _sendMessageViaEmail(
+    BuildContext modalContext,
+    String email,
+    String message,
+  ) async {
     final subject = Uri.encodeComponent('Entrega de fotos - ClickPix');
     final body = Uri.encodeComponent(message);
     final uri = Uri.parse('mailto:$email?subject=$subject&body=$body');
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!modalContext.mounted) {
+      return;
+    }
+    if (!opened) {
+      _showActionSnackBar(
+        modalContext,
+        tr(
+          modalContext,
+          pt: 'Nao foi possivel abrir o e-mail agora.',
+          es: 'No se pudo abrir el correo ahora.',
+          en: 'Could not open email right now.',
+        ),
+      );
+    }
+  }
+
+  Future<void> _copyMessageToClipboard(
+    BuildContext modalContext,
+    String message,
+  ) async {
+    await Clipboard.setData(ClipboardData(text: message));
+    if (!modalContext.mounted) {
+      return;
+    }
+    _showActionSnackBar(
+      modalContext,
+      tr(
+        modalContext,
+        pt: 'Mensagem copiada. Se precisar, abra o chat e cole manualmente.',
+        es: 'Mensaje copiado. Si hace falta, abre el chat y p\u00e9galo manualmente.',
+        en: 'Message copied. If needed, open the chat and paste it manually.',
+      ),
+    );
+  }
+
+  Future<void> _openWhatsAppChat(
+    BuildContext modalContext,
+    String phone,
+  ) async {
+    final normalizedPhone = phone.replaceAll(RegExp(r'\D'), '');
+    if (normalizedPhone.isEmpty) {
+      _showActionSnackBar(
+        modalContext,
+        tr(
+          modalContext,
+          pt: 'Informe um WhatsApp v\u00e1lido para abrir o chat.',
+          es: 'Ingresa un WhatsApp v\u00e1lido para abrir el chat.',
+          en: 'Provide a valid WhatsApp number to open the chat.',
+        ),
+      );
+      return;
+    }
+
+    final uri = Uri.parse('https://wa.me/$normalizedPhone');
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!modalContext.mounted) {
+      return;
+    }
+    if (!opened) {
+      _showActionSnackBar(
+        modalContext,
+        tr(
+          modalContext,
+          pt: 'N\u00e3o foi poss\u00edvel abrir o chat do cliente agora.',
+          es: 'No se pudo abrir el chat del cliente ahora.',
+          en: 'Could not open the client chat now.',
+        ),
+      );
+    }
+  }
+
+  void _showShareFeedback(
+    BuildContext context, {
+    required String baseMessage,
+    required ResolvedDeliveryShareFiles resolved,
+  }) {
+    final missingCount = resolved.missingCount;
+    final fullMessage = missingCount <= 0
+        ? baseMessage
+        : '$baseMessage '
+            '${tr(context, pt: '$missingCount foto(s) n\u00e3o estavam mais dispon\u00edveis.', es: '$missingCount foto(s) ya no estaban disponibles.', en: '$missingCount photo(s) were no longer available.')}';
+    _showActionSnackBar(context, fullMessage);
+  }
+
+  void _showActionSnackBar(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  bool _isPaidOrderStatus(String status) {
+    final normalized = status.trim().toLowerCase();
+    return normalized == 'paid' ||
+        normalized == 'approved' ||
+        normalized == 'completed' ||
+        normalized == 'settled' ||
+        normalized == 'succeeded' ||
+        normalized == 'delivered' ||
+        normalized == 'delivering';
   }
 
   int _parseCurrencyCents(String rawText) {
@@ -1429,6 +1936,7 @@ class _RecentPhotosPageState extends State<RecentPhotosPage> {
 
 class _PixPaymentCard extends StatefulWidget {
   const _PixPaymentCard({
+    required this.orderId,
     required this.payload,
     required this.sourceHint,
     required this.paymentIntegration,
@@ -1436,10 +1944,11 @@ class _PixPaymentCard extends StatefulWidget {
     required this.onPaid,
   });
 
+  final String orderId;
   final String payload;
   final String sourceHint;
   final PaymentIntegrationSettings paymentIntegration;
-  final PaymentChargeSession? session;
+  final PaymentCheckoutSession? session;
   final Future<void> Function() onPaid;
 
   @override
@@ -1469,7 +1978,7 @@ class _PixPaymentCardState extends State<_PixPaymentCard> {
       });
     }
 
-    if (widget.paymentIntegration.isApiEnabled && widget.session != null) {
+    if (widget.paymentIntegration.hasBackendContract && widget.session != null) {
       _refreshStatus();
       _statusTimer = Timer.periodic(
         const Duration(seconds: 5),
@@ -1490,9 +1999,9 @@ class _PixPaymentCardState extends State<_PixPaymentCard> {
     }
     _checkingStatus = true;
     try {
-      final status = await _integrationClient.fetchPixStatus(
+      final status = await _integrationClient.fetchCheckoutStatus(
         settings: widget.paymentIntegration,
-        session: widget.session!,
+        orderId: widget.orderId,
       );
       if (!mounted) {
         return;
@@ -1531,7 +2040,9 @@ class _PixPaymentCardState extends State<_PixPaymentCard> {
         normalized == 'approved' ||
         normalized == 'completed' ||
         normalized == 'settled' ||
-        normalized == 'succeeded';
+        normalized == 'succeeded' ||
+        normalized == 'delivered' ||
+        normalized == 'delivering';
   }
 
   @override
@@ -1555,7 +2066,7 @@ class _PixPaymentCardState extends State<_PixPaymentCard> {
               const SizedBox(height: 4),
               Text(widget.sourceHint),
             ],
-            if (widget.paymentIntegration.isApiEnabled &&
+            if (widget.paymentIntegration.hasBackendContract &&
                 widget.session != null)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
@@ -1606,6 +2117,21 @@ class _PixPaymentCardState extends State<_PixPaymentCard> {
                   ],
                 ),
               ),
+            if (!_paid) ...[
+              const SizedBox(height: 8),
+              FilledButton.icon(
+                onPressed: widget.onPaid,
+                icon: const Icon(Icons.verified),
+                label: Text(
+                  tr(
+                    context,
+                    pt: 'Marcar pagamento confirmado',
+                    es: 'Marcar pago confirmado',
+                    en: 'Mark payment confirmed',
+                  ),
+                ),
+              ),
+            ],
             if (_statusError.isNotEmpty) ...[
               const SizedBox(height: 4),
               Text(_statusError),
@@ -1673,6 +2199,255 @@ class _PixPaymentCardState extends State<_PixPaymentCard> {
                   ),
                 ),
               ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PayPalPaymentCard extends StatefulWidget {
+  const _PayPalPaymentCard({
+    required this.orderId,
+    required this.paymentIntegration,
+    required this.session,
+    required this.paypalAccount,
+    required this.sourceHint,
+    required this.onPaid,
+  });
+
+  final String orderId;
+  final PaymentIntegrationSettings paymentIntegration;
+  final PaymentCheckoutSession? session;
+  final String paypalAccount;
+  final String sourceHint;
+  final Future<void> Function() onPaid;
+
+  @override
+  State<_PayPalPaymentCard> createState() => _PayPalPaymentCardState();
+}
+
+class _PayPalPaymentCardState extends State<_PayPalPaymentCard> {
+  late final PaymentIntegrationClient _integrationClient;
+  Timer? _statusTimer;
+  String _status = '';
+  bool _paid = false;
+  bool _checkingStatus = false;
+  String _statusError = '';
+  String? _checkoutUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _integrationClient = PaymentIntegrationClient();
+    _status = widget.session?.status.trim().isEmpty ?? true
+        ? 'pending'
+        : widget.session!.status.trim();
+    _checkoutUrl = widget.session?.checkoutUrl;
+    _paid = _isPaidStatus(_status);
+
+    if (_paid) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        widget.onPaid();
+      });
+    }
+
+    if (widget.paymentIntegration.hasBackendContract && widget.session != null) {
+      _refreshStatus();
+      _statusTimer = Timer.periodic(
+        const Duration(seconds: 5),
+        (_) => _refreshStatus(),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _statusTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _refreshStatus() async {
+    if (_checkingStatus || widget.session == null) {
+      return;
+    }
+    _checkingStatus = true;
+    try {
+      final status = await _integrationClient.fetchCheckoutStatus(
+        settings: widget.paymentIntegration,
+        orderId: widget.orderId,
+      );
+      if (!mounted) {
+        return;
+      }
+      if (status != null) {
+        final paid = status.paid || _isPaidStatus(status.status);
+        setState(() {
+          _status = status.status;
+          _paid = paid;
+          _checkoutUrl = status.checkoutUrl ?? _checkoutUrl;
+          _statusError = '';
+        });
+        if (paid) {
+          await widget.onPaid();
+        }
+      }
+    } on Object {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _statusError = tr(
+          context,
+          pt: 'Nao foi possivel atualizar o status PayPal agora.',
+          es: 'No se pudo actualizar el estado de PayPal ahora.',
+          en: 'Could not refresh PayPal status right now.',
+        );
+      });
+    } finally {
+      _checkingStatus = false;
+    }
+  }
+
+  Future<void> _openCheckout() async {
+    final checkoutUrl = _checkoutUrl?.trim() ?? '';
+    if (checkoutUrl.isEmpty) {
+      return;
+    }
+
+    await launchUrl(
+      Uri.parse(checkoutUrl),
+      mode: LaunchMode.externalApplication,
+    );
+  }
+
+  bool _isPaidStatus(String status) {
+    final normalized = status.trim().toLowerCase();
+    return normalized == 'paid' ||
+        normalized == 'approved' ||
+        normalized == 'completed' ||
+        normalized == 'settled' ||
+        normalized == 'succeeded' ||
+        normalized == 'delivered' ||
+        normalized == 'delivering';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasCheckoutUrl = _checkoutUrl?.trim().isNotEmpty ?? false;
+    final paypalAccount = widget.paypalAccount.trim();
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              tr(
+                context,
+                pt: 'Checkout PayPal',
+                es: 'Checkout PayPal',
+                en: 'PayPal checkout',
+              ),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            if (widget.sourceHint.trim().isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(widget.sourceHint),
+            ],
+            const SizedBox(height: 8),
+            Text(
+              '${tr(context, pt: 'Conta PayPal', es: 'Cuenta PayPal', en: 'PayPal account')}: '
+              '${paypalAccount.isEmpty ? tr(context, pt: 'Nao informada', es: 'No informada', en: 'Not provided') : paypalAccount}',
+            ),
+            if (widget.paymentIntegration.hasBackendContract &&
+                widget.session != null) ...[
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Chip(
+                    avatar: Icon(
+                      _paid ? Icons.check_circle : Icons.schedule,
+                      color: _paid ? Colors.green.shade700 : null,
+                    ),
+                    label: Text(
+                      _paid
+                          ? tr(
+                              context,
+                              pt: 'Pagamento confirmado',
+                              es: 'Pago confirmado',
+                              en: 'Payment confirmed',
+                            )
+                          : tr(
+                              context,
+                              pt: 'Status: $_status',
+                              es: 'Estado: $_status',
+                              en: 'Status: $_status',
+                            ),
+                    ),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _checkingStatus ? null : _refreshStatus,
+                    icon: _checkingStatus
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.refresh),
+                    label: Text(
+                      tr(
+                        context,
+                        pt: 'Atualizar status',
+                        es: 'Actualizar estado',
+                        en: 'Refresh status',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            if (hasCheckoutUrl) ...[
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _openCheckout,
+                  icon: const Icon(Icons.open_in_new),
+                  label: Text(
+                    tr(
+                      context,
+                      pt: 'Abrir checkout do PayPal',
+                      es: 'Abrir checkout de PayPal',
+                      en: 'Open PayPal checkout',
+                    ),
+                  ),
+                ),
+              ),
+            ],
+            if (!_paid) ...[
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: widget.onPaid,
+                icon: const Icon(Icons.verified),
+                label: Text(
+                  tr(
+                    context,
+                    pt: 'Marcar pagamento confirmado',
+                    es: 'Marcar pago confirmado',
+                    en: 'Mark payment confirmed',
+                  ),
+                ),
+              ),
+            ],
+            if (_statusError.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(_statusError),
             ],
           ],
         ),

@@ -75,6 +75,7 @@ export async function deliverOrderAssets({
     });
 
     uploaded.push({
+      sourceId: asset.sourceId ?? null,
       fileName,
       path: fullPath,
       checksum,

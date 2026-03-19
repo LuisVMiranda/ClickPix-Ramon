@@ -100,23 +100,34 @@
   </section>
 
   <script>
-    const ENDPOINT = '/portal/validate-access';
     const locale = (navigator.language || 'pt-BR').toLowerCase();
+    const currentUrl = new URL(window.location.href);
+    const pathSegments = currentUrl.pathname.split('/').filter(Boolean);
+    const initialOrderId =
+      currentUrl.searchParams.get('orderId') ||
+      currentUrl.searchParams.get('pedido') ||
+      (pathSegments[0] === 'gallery' ? pathSegments[1] || '' : '');
+    const apiBase =
+      currentUrl.searchParams.get('apiBase') ||
+      currentUrl.searchParams.get('backend') ||
+      currentUrl.origin;
+    const endpoint = new URL('/portal/validate-access', apiBase).toString();
     const fallback = 'pt';
 
     const messages = {
       pt: {
         title: 'Acessar galeria',
-        hint: 'Digite o ID do pedido e o código de 6 dígitos recebido.',
+        hint: 'Digite o ID do pedido e o codigo de 6 digitos recebido.',
         orderIdLabel: 'ID do pedido',
-        codeLabel: 'Código',
+        codeLabel: 'Codigo',
         validateBtn: 'Validar acesso',
-        invalidPayload: 'Preencha pedido e código de 6 dígitos válido.',
-        expired: 'Código expirado. Solicite um novo código ao fotógrafo.',
-        invalidCode: 'Código inválido. Confira os 6 dígitos e tente novamente.',
-        genericError: 'Não foi possível validar seu acesso.',
-        connectionError: 'Falha de conexão com o servidor. Tente novamente.',
-        success: (seconds) => `Acesso liberado! Links válidos por ${Math.ceil(seconds / 60)} min.`,
+        invalidPayload: 'Preencha pedido e codigo valido de 6 digitos.',
+        expired: 'Codigo expirado. Solicite um novo codigo ao fotografo.',
+        invalidCode: 'Codigo invalido. Confira os 6 digitos e tente novamente.',
+        paymentPending: 'Pagamento ainda pendente. Assim que o pagamento for confirmado, tente validar novamente.',
+        genericError: 'Nao foi possivel validar seu acesso.',
+        connectionError: 'Falha de conexao com o servidor. Tente novamente.',
+        success: (seconds) => `Acesso liberado! Links validos por ${Math.ceil(seconds / 60)} min.`,
         download: 'Baixar',
       },
       en: {
@@ -125,26 +136,28 @@
         orderIdLabel: 'Order id',
         codeLabel: 'Code',
         validateBtn: 'Validate access',
-        invalidPayload: 'Fill order id and a valid 6-digit code.',
+        invalidPayload: 'Fill the order id and a valid 6-digit code.',
         expired: 'Code expired. Ask the photographer for a new code.',
         invalidCode: 'Invalid code. Check the 6 digits and try again.',
+        paymentPending: 'Payment is still pending. Once it is confirmed, try validating again.',
         genericError: 'Unable to validate your access.',
         connectionError: 'Connection failed. Please try again.',
         success: (seconds) => `Access granted! Links expire in ${Math.ceil(seconds / 60)} min.`,
         download: 'Download',
       },
       es: {
-        title: 'Acceder a galería',
-        hint: 'Ingresa el ID del pedido y el código de 6 dígitos.',
+        title: 'Acceder a galeria',
+        hint: 'Ingresa el ID del pedido y el codigo de 6 digitos.',
         orderIdLabel: 'ID del pedido',
-        codeLabel: 'Código',
+        codeLabel: 'Codigo',
         validateBtn: 'Validar acceso',
-        invalidPayload: 'Completa el pedido y un código válido de 6 dígitos.',
-        expired: 'Código vencido. Pide un nuevo código al fotógrafo.',
-        invalidCode: 'Código inválido. Verifica los 6 dígitos e inténtalo de nuevo.',
+        invalidPayload: 'Completa el pedido y un codigo valido de 6 digitos.',
+        expired: 'Codigo vencido. Pide un nuevo codigo al fotografo.',
+        invalidCode: 'Codigo invalido. Verifica los 6 digitos e intentalo de nuevo.',
+        paymentPending: 'El pago todavia esta pendiente. Cuando se confirme, vuelve a validar.',
         genericError: 'No fue posible validar tu acceso.',
-        connectionError: 'Error de conexión con el servidor. Inténtalo nuevamente.',
-        success: (seconds) => `¡Acceso liberado! Enlaces válidos por ${Math.ceil(seconds / 60)} min.`,
+        connectionError: 'Error de conexion con el servidor. Intentalo nuevamente.',
+        success: (seconds) => `Acceso liberado! Enlaces validos por ${Math.ceil(seconds / 60)} min.`,
         download: 'Descargar',
       },
     };
@@ -161,6 +174,9 @@
       document.getElementById('orderIdLabel').textContent = t.orderIdLabel;
       document.getElementById('codeLabel').textContent = t.codeLabel;
       document.getElementById('validateBtn').textContent = t.validateBtn;
+      if (initialOrderId) {
+        document.getElementById('orderId').value = initialOrderId;
+      }
     }
 
     function setStatus(message, isError) {
@@ -206,7 +222,7 @@
       }
 
       try {
-        const response = await fetch(ENDPOINT, {
+        const response = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ orderId, code }),
@@ -218,6 +234,8 @@
             setStatus(t.expired, true);
           } else if (payload.reason === 'invalid_code') {
             setStatus(t.invalidCode, true);
+          } else if (payload.reason === 'payment_pending') {
+            setStatus(t.paymentPending, true);
           } else {
             setStatus(t.genericError, true);
           }

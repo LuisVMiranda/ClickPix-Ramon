@@ -1,0 +1,31 @@
+{
+  "functions": {
+    "source": "functions"
+  },
+  "hosting": {
+    "public": "portal_web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "/portal/validate-access",
+        "function": "validateAccess"
+      },
+      {
+        "source": "/orders/**",
+        "function": "ordersApi"
+      },
+      {
+        "source": "/gallery/**",
+        "destination": "/index.html"
+      },
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}

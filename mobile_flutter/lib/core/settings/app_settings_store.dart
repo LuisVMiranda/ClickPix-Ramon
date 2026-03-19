@@ -11,6 +11,8 @@ class AppSettingsStore {
 
   final AppDatabase _database;
 
+  AppDatabase get database => _database;
+
   static const Locale defaultLocale = Locale('pt', 'BR');
   static const String defaultAdminUsername = 'admin';
   static const String defaultAccentColorKey = 'blue_mid';
@@ -426,11 +428,13 @@ class AppSettingsStore {
 
   Future<void> appendDeliveryHistory(DeliveryHistoryEntry entry) async {
     final current = await loadDeliveryHistory();
-    final next = <DeliveryHistoryEntry>[entry, ...current]
-        .take(100)
-        .toList(growable: false);
-    final rawJson =
-        jsonEncode(next.map((item) => item.toJson()).toList(growable: false));
+    final next = <DeliveryHistoryEntry>[
+      entry,
+      ...current.where((existing) => existing.id != entry.id),
+    ]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final trimmed = next.take(100).toList(growable: false);
+    final rawJson = jsonEncode(
+        trimmed.map((item) => item.toJson()).toList(growable: false));
 
     await _saveSettings(
       AppSettingsCompanion(
@@ -691,8 +695,11 @@ class PaymentIntegrationSettings {
   final String apiBaseUrl;
   final String apiToken;
 
-  bool get isApiEnabled =>
-      provider != PaymentProvider.manual && apiBaseUrl.trim().isNotEmpty;
+  bool get hasBackendContract => apiBaseUrl.trim().isNotEmpty;
+  bool get isPixApiEnabled =>
+      provider != PaymentProvider.manual && hasBackendContract;
+  bool get isPayPalApiEnabled => hasBackendContract;
+  bool get isApiEnabled => isPixApiEnabled;
 
   PaymentIntegrationSettings copyWith({
     PaymentProvider? provider,
@@ -951,6 +958,7 @@ class DeliveryHistoryEntry {
     this.databaseCodeExpiresAt,
     this.saleDate,
     this.photoFileNames = const [],
+    this.clientMessage = '',
   });
 
   final String id;
@@ -970,6 +978,7 @@ class DeliveryHistoryEntry {
   final DateTime? databaseCodeExpiresAt;
   final DateTime? saleDate;
   final List<String> photoFileNames;
+  final String clientMessage;
 
   DateTime get effectiveSaleDate => saleDate ?? createdAt;
 
@@ -992,6 +1001,7 @@ class DeliveryHistoryEntry {
       'databaseCodeExpiresAt': databaseCodeExpiresAt?.toIso8601String(),
       'saleDate': saleDate?.toIso8601String(),
       'photoFileNames': photoFileNames,
+      'clientMessage': clientMessage,
     };
   }
 
@@ -1029,6 +1039,7 @@ class DeliveryHistoryEntry {
               .where((item) => item.isNotEmpty)
               .toList(growable: false)
           : const [],
+      clientMessage: json['clientMessage'] as String? ?? '',
     );
   }
 }

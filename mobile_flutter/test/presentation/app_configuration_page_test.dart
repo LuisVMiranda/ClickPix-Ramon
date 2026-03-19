@@ -3,6 +3,7 @@ import 'package:clickpix_ramon/data/local/app_database.dart';
 import 'package:clickpix_ramon/main.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -24,6 +25,13 @@ void main() {
     Future<void> pumpConfigurationPage(WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('pt', 'BR'),
+          localizationsDelegates: GlobalMaterialLocalizations.delegates,
+          supportedLocales: const [
+            Locale('pt', 'BR'),
+            Locale('en'),
+            Locale('es'),
+          ],
           home: AppConfigurationPage(
             settingsStore: store,
             locale: const Locale('pt', 'BR'),
@@ -40,16 +48,23 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    Future<void> expandSection(
+      WidgetTester tester,
+      String title,
+    ) async {
+      await tester.ensureVisible(find.text(title));
+      await tester.tap(find.text(title).first);
+      await tester.pumpAndSettle();
+    }
+
     Future<void> addCombo(
       WidgetTester tester, {
       required String name,
       required String minimumPhotos,
       required String unitPrice,
     }) async {
-      await tester.ensureVisible(
-        find.widgetWithText(OutlinedButton, 'Adicionar combo'),
-      );
-      await tester.tap(find.widgetWithText(OutlinedButton, 'Adicionar combo'));
+      await tester.ensureVisible(find.text('Adicionar combo'));
+      await tester.tap(find.text('Adicionar combo'));
       await tester.pumpAndSettle();
 
       final editorScaffold = find.ancestor(
@@ -64,13 +79,15 @@ void main() {
       await tester.enterText(editorFields.at(0), name);
       await tester.enterText(editorFields.at(1), minimumPhotos);
       await tester.enterText(editorFields.at(2), unitPrice);
-      await tester.tap(find.widgetWithText(FilledButton, 'Salvar alterações'));
+      tester.testTextInput.hide();
+      await tester.pumpAndSettle();
+      tester.widget<FilledButton>(find.byType(FilledButton).last).onPressed!();
       await tester.pumpAndSettle();
     }
 
-    testWidgets('adds two combos and edits one without exceptions',
-        (tester) async {
+    testWidgets('adds two combos and edits one without exceptions', (tester) async {
       await pumpConfigurationPage(tester);
+      await expandSection(tester, 'Combos de fotos');
 
       await addCombo(
         tester,
@@ -109,7 +126,9 @@ void main() {
         matching: find.byType(TextField),
       );
       await tester.enterText(editorFields.at(0), 'Combo 2 VIP');
-      await tester.tap(find.widgetWithText(FilledButton, 'Salvar alterações'));
+      tester.testTextInput.hide();
+      await tester.pumpAndSettle();
+      tester.widget<FilledButton>(find.byType(FilledButton).last).onPressed!();
       await tester.pumpAndSettle();
 
       expect(find.text('Combo 2 VIP'), findsOneWidget);
@@ -118,6 +137,7 @@ void main() {
 
     testWidgets('shows new color families without shade chips', (tester) async {
       await pumpConfigurationPage(tester);
+      await expandSection(tester, 'Acessibilidade e exibição');
 
       expect(find.text('Cinza'), findsOneWidget);
       expect(find.text('Vermelho'), findsOneWidget);
@@ -126,6 +146,7 @@ void main() {
 
       await tester.tap(find.widgetWithText(ChoiceChip, 'Cinza'));
       await tester.pumpAndSettle();
+
       expect(lastVisualSettings.accentColorKey, 'gray_mid');
       expect(find.widgetWithText(ChoiceChip, 'Claro'), findsNothing);
       expect(find.widgetWithText(ChoiceChip, 'Médio'), findsNothing);

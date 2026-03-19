@@ -36,6 +36,96 @@ const providerStatusToOrderStatus = {
 
 const defaultPaymentEventsStore = new FirestorePaymentEventsStore(firestore);
 const defaultOrdersStore = new FirestoreOrdersStore(firestore);
+const accessUnlockedStatuses = new Set(['Paid', 'Delivering', 'Delivered']);
+
+function normalizeRequestPath(pathname = '') {
+  const segments = String(pathname)
+    .split('/')
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+
+  return segments[0] === 'orders' ? segments.slice(1) : segments;
+}
+
+function toStringKeyedMap(rawValue) {
+  if (!rawValue || typeof rawValue !== 'object' || Array.isArray(rawValue)) {
+    return {};
+  }
+
+  return Object.fromEntries(Object.entries(rawValue).map(([key, value]) => [String(key), value]));
+}
+
+function normalizeItems(rawItems = []) {
+  if (!Array.isArray(rawItems)) {
+    return [];
+  }
+
+  return rawItems
+    .map((item) => toStringKeyedMap(item))
+    .filter((item) => String(item.photoAssetId ?? '').trim())
+    .map((item) => ({
+      photoAssetId: String(item.photoAssetId).trim(),
+      unitPriceCents: Number(item.unitPriceCents ?? 0),
+    }));
+}
+
+function normalizeAssets(rawAssets = []) {
+  if (!Array.isArray(rawAssets)) {
+    return [];
+  }
+
+  return rawAssets
+    .map((asset, index) => {
+      const map = toStringKeyedMap(asset);
+      const sourceId = String(map.sourceId ?? map.photoAssetId ?? `asset-${index + 1}`).trim();
+      const fileName = String(map.fileName ?? '').trim();
+      const base64Data = String(map.base64Data ?? '').trim();
+      const downloadUrl = String(map.downloadUrl ?? '').trim();
+      const contentType = String(map.contentType ?? '').trim();
+
+      if (!sourceId || (!base64Data && !downloadUrl)) {
+        return null;
+      }
+
+      return {
+        sourceId,
+        fileName,
+        base64Data,
+        downloadUrl,
+        contentType: contentType || 'image/jpeg',
+      };
+    })
+    .filter(Boolean);
+}
+
+function canAccessDelivery(order = {}) {
+  const totalAmountCents = Number(order.totalAmountCents ?? 0);
+  if (totalAmountCents <= 0) {
+    return true;
+  }
+
+  return accessUnlockedStatuses.has(String(order.status ?? '').trim());
+}
+
+function buildPaymentStatusSummary(order = {}) {
+  const payment = toStringKeyedMap(order.payment);
+  const orderStatus = String(order.status ?? '').trim();
+  const paymentStatus = String(payment.status ?? orderStatus ?? 'pending').trim();
+
+  return {
+    ok: true,
+    orderId: order.id,
+    orderStatus,
+    provider: payment.provider ?? null,
+    status: paymentStatus,
+    paid: canAccessDelivery(order),
+    externalReference: order.externalReference ?? payment.externalReference ?? null,
+    checkoutUrl: payment.checkoutUrl ?? null,
+    qrCodeText: payment.qrCodeText ?? null,
+    qrCodeBase64: payment.qrCodeBase64 ?? null,
+    deliveryLocked: !canAccessDelivery(order),
+  };
+}
 
 function buildExpiresAt(expirationDays) {
   return new Date(Date.now() + expirationDays * 86400000).toISOString();
@@ -136,6 +226,13 @@ export async function validateAccessEndpoint(request, options = {}) {
   const order = await (options.ordersStore ?? defaultOrdersStore).findById(orderId);
   if (!order?.delivery?.access) {
     return { status: 404, body: { ok: false, reason: 'order_not_found' } };
+  }
+
+  if (!canAccessDelivery(order)) {
+    return {
+      status: 423,
+      body: { ok: false, reason: 'payment_pending' },
+    };
   }
 
   const validation = await validateOrderAccessCode(order.delivery.access, typedCode);
@@ -306,7 +403,7 @@ async function updateOrderStatusByExternalReference({ ordersStore, externalRefer
     };
   }
 
-  await ordersStore.updateStatus(order.id, nextStatus);
+  await ordersStore.updateStatus(order.id, nextStatus, { providerStatus });
   return { status: 'order_updated', orderId: order.id, orderStatus: nextStatus };
 }
 
@@ -340,30 +437,165 @@ export async function createPayPalIntent(order) {
   return createOrderPaymentIntent(order, payPalProvider);
 }
 
+export async function syncOrderToCloud(payload, options = {}) {
+  const order = toStringKeyedMap(payload?.order);
+  const client = toStringKeyedMap(payload?.client);
+  const orderId = String(order.id ?? '').trim();
+  const clientId = String(client.id ?? order.clientId ?? '').trim();
+  const totalAmountCents = Number(order.totalAmountCents ?? 0);
+  const expirationDays = Number(payload?.expirationDays ?? 7);
+  const currency = String(order.currency ?? 'BRL').trim() || 'BRL';
+  const paymentMethod = String(order.paymentMethod ?? 'pix').trim() || 'pix';
+  const externalReference = String(order.externalReference ?? orderId).trim() || orderId;
+  const items = normalizeItems(payload?.items);
+  const assets = normalizeAssets(payload?.assets);
+
+  if (
+    !orderId ||
+    !clientId ||
+    Number.isNaN(totalAmountCents) ||
+    Number.isNaN(expirationDays) ||
+    expirationDays <= 0
+  ) {
+    return { status: 400, body: { ok: false, reason: 'invalid_payload' } };
+  }
+
+  const ordersStore = options.ordersStore ?? defaultOrdersStore;
+  const uploadAssets = options.uploadAssets ?? deliverOrderAssets;
+  const existingOrder = await ordersStore.findById(orderId);
+  const storagePrefix = existingOrder?.delivery?.storagePrefix ?? createStoragePrefix(orderId);
+
+  const uploadedAssets =
+    Array.isArray(existingOrder?.delivery?.assets) && existingOrder.delivery.assets.length > 0
+      ? existingOrder.delivery.assets
+      : await uploadAssets({
+          orderId,
+          storagePrefix,
+          assets,
+        });
+
+  let access = existingOrder?.delivery?.access;
+  let accessCode = null;
+  if (!access?.hash || !access?.expiresAt) {
+    const generated = await generateOrderAccessCode(orderId, expirationDays);
+    access = generated.access;
+    accessCode = generated.code;
+  }
+
+  const nextStatus = String(order.status ?? existingOrder?.status ?? 'Created').trim() || 'Created';
+  const createdAt = String(order.createdAt ?? existingOrder?.createdAt ?? '').trim() || new Date().toISOString();
+
+  await ordersStore.saveSyncedOrder(orderId, {
+    clientId,
+    client: {
+      id: clientId,
+      name: String(client.name ?? '').trim(),
+      whatsapp: String(client.whatsapp ?? '').trim(),
+      email: String(client.email ?? '').trim() || null,
+    },
+    totalAmountCents,
+    currency,
+    paymentMethod,
+    externalReference,
+    status: nextStatus,
+    source: 'mobile',
+    photoCount: items.length,
+    items,
+    createdAt,
+    delivery: {
+      galleryId: existingOrder?.delivery?.galleryId ?? orderId,
+      storagePrefix,
+      access,
+      assets: uploadedAssets,
+      lockedUntilPaid: totalAmountCents > 0,
+      syncedAt: new Date().toISOString(),
+    },
+  });
+
+  return {
+    status: 201,
+    body: {
+      ok: true,
+      orderId,
+      orderStatus: nextStatus,
+      accessCode,
+      delivery: {
+        expiresAt: access.expiresAt,
+        storagePrefix,
+        lockedUntilPaid: !canAccessDelivery({
+          totalAmountCents,
+          status: nextStatus,
+        }),
+        assets: uploadedAssets,
+      },
+    },
+  };
+}
+
+export async function createPaymentIntentForOrder({
+  orderId,
+  provider,
+  payload = {},
+  ordersStore = defaultOrdersStore,
+}) {
+  if (!orderId || !['mercadopago', 'paypal'].includes(provider)) {
+    return { status: 400, body: { ok: false, reason: 'invalid_payload' } };
+  }
+
+  const order = await ordersStore.findById(orderId);
+  if (!order) {
+    return { status: 404, body: { ok: false, reason: 'order_not_found' } };
+  }
+
+  try {
+    const selectedProvider = provider === 'mercadopago' ? mercadoPagoProvider : payPalProvider;
+    const { paymentIntent } = await createOrderPaymentIntent(order, selectedProvider, payload);
+    await ordersStore.savePaymentIntent(orderId, paymentIntent);
+    return { status: 201, body: { ok: true, paymentIntent } };
+  } catch (error) {
+    return {
+      status: 409,
+      body: {
+        ok: false,
+        reason: 'payment_intent_error',
+        message: error instanceof Error ? error.message : String(error),
+      },
+    };
+  }
+}
+
+export async function getOrderPaymentStatus(orderId, options = {}) {
+  const normalizedOrderId = String(orderId ?? '').trim();
+  if (!normalizedOrderId) {
+    return { status: 400, body: { ok: false, reason: 'invalid_payload' } };
+  }
+
+  const order = await (options.ordersStore ?? defaultOrdersStore).findById(normalizedOrderId);
+  if (!order) {
+    return { status: 404, body: { ok: false, reason: 'order_not_found' } };
+  }
+
+  return {
+    status: 200,
+    body: buildPaymentStatusSummary(order),
+  };
+}
+
 export const createPaymentIntent = onRequest(async (req, res) => {
   if (req.method !== 'POST') {
     res.status(405).json({ ok: false, reason: 'method_not_allowed' });
     return;
   }
 
-  const orderId = String(req.path.split('/')[2] ?? req.body?.orderId ?? '').trim();
+  const pathSegments = normalizeRequestPath(req.path);
+  const orderId = String(pathSegments[0] ?? req.body?.orderId ?? '').trim();
   const provider = String(req.query.provider ?? req.body?.provider ?? '').toLowerCase();
-  if (!orderId || !['mercadopago', 'paypal'].includes(provider)) {
-    res.status(400).json({ ok: false, reason: 'invalid_payload' });
-    return;
-  }
-
-  const order = await defaultOrdersStore.findById(orderId);
-  if (!order) {
-    res.status(404).json({ ok: false, reason: 'order_not_found' });
-    return;
-  }
-
-  const selectedProvider = provider === 'mercadopago' ? mercadoPagoProvider : payPalProvider;
-  const { paymentIntent } = await createOrderPaymentIntent(order, selectedProvider, req.body ?? {});
-  await defaultOrdersStore.savePaymentIntent(orderId, paymentIntent);
-
-  res.status(201).json({ ok: true, paymentIntent });
+  const result = await createPaymentIntentForOrder({
+    orderId,
+    provider,
+    payload: req.body ?? {},
+  });
+  res.status(result.status).json(result.body);
 });
 
 export const confirmOrderDelivery = onRequest(async (req, res) => {
@@ -407,6 +639,34 @@ export const payPalWebhook = onRequest(async (req, res) => {
     headers: req.headers,
   });
   res.status(result.accepted ? 200 : 400).json(result);
+});
+
+export const ordersApi = onRequest(async (req, res) => {
+  const pathSegments = normalizeRequestPath(req.path);
+
+  if (req.method === 'POST' && pathSegments.length === 1 && pathSegments[0] === 'sync') {
+    const result = await syncOrderToCloud(req.body, {});
+    res.status(result.status).json(result.body);
+    return;
+  }
+
+  if (req.method === 'POST' && pathSegments.length === 2 && pathSegments[1] === 'payment-intents') {
+    const result = await createPaymentIntentForOrder({
+      orderId: pathSegments[0],
+      provider: String(req.query.provider ?? req.body?.provider ?? '').toLowerCase(),
+      payload: req.body ?? {},
+    });
+    res.status(result.status).json(result.body);
+    return;
+  }
+
+  if (req.method === 'GET' && pathSegments.length === 2 && pathSegments[1] === 'payment-status') {
+    const result = await getOrderPaymentStatus(pathSegments[0], {});
+    res.status(result.status).json(result.body);
+    return;
+  }
+
+  res.status(404).json({ ok: false, reason: 'not_found' });
 });
 
 export const validateAccess = onRequest(async (req, res) => {

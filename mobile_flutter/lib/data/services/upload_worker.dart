@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:clickpix_ramon/core/settings/app_settings_store.dart';
 import 'package:clickpix_ramon/data/local/app_database.dart';
+import 'package:clickpix_ramon/data/services/remote_upload_sync_gateway.dart';
 import 'package:clickpix_ramon/data/services/upload_queue_service.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:drift/native.dart';
@@ -25,16 +26,6 @@ class ConnectivityNetworkConstraint implements NetworkConstraint {
     final statuses = await _connectivity.checkConnectivity();
     return statuses.contains(ConnectivityResult.wifi);
   }
-}
-
-class NoopUploadSyncGateway implements UploadSyncGateway {
-  const NoopUploadSyncGateway();
-
-  @override
-  Future<void> startPaymentIfApplicable({required String orderId}) async {}
-
-  @override
-  Future<void> uploadOrder({required String orderId}) async {}
 }
 
 class UploadWorkerScheduler {
@@ -61,11 +52,15 @@ class UploadWorkerScheduler {
   }
 
   Future<void> processNow() async {
+    final settingsStore = AppSettingsStore(_database);
     final service = UploadQueueService(
       database: _database,
-      settingsStore: AppSettingsStore(_database),
+      settingsStore: settingsStore,
       networkConstraint: ConnectivityNetworkConstraint(Connectivity()),
-      syncGateway: const NoopUploadSyncGateway(),
+      syncGateway: RemoteUploadSyncGateway(
+        database: _database,
+        settingsStore: settingsStore,
+      ),
     );
     await service.processQueue();
   }
@@ -81,11 +76,15 @@ void _callbackDispatcher() {
     final docsDirectory = await getApplicationDocumentsDirectory();
     final dbFile = File(p.join(docsDirectory.path, 'clickpix.sqlite'));
     final database = AppDatabase(NativeDatabase(dbFile));
+    final settingsStore = AppSettingsStore(database);
     final service = UploadQueueService(
       database: database,
-      settingsStore: AppSettingsStore(database),
+      settingsStore: settingsStore,
       networkConstraint: ConnectivityNetworkConstraint(Connectivity()),
-      syncGateway: const NoopUploadSyncGateway(),
+      syncGateway: RemoteUploadSyncGateway(
+        database: database,
+        settingsStore: settingsStore,
+      ),
     );
     await service.processQueue();
     await database.close();

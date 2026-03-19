@@ -25,14 +25,21 @@ export class FirestoreOrdersStore {
     return { id: doc.id, ...doc.data() };
   }
 
-  async updateStatus(orderId, status) {
-    await this.firestore.collection('orders').doc(orderId).set(
-      {
-        status,
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true },
-    );
+  async updateStatus(orderId, status, { providerStatus } = {}) {
+    const payload = {
+      status,
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+
+    if (providerStatus) {
+      payload.payment = {
+        status: providerStatus,
+      };
+    }
+
+    await this.firestore.collection('orders').doc(orderId).set(payload, {
+      merge: true,
+    });
   }
 
   async savePaymentIntent(orderId, paymentIntent) {
@@ -52,6 +59,17 @@ export class FirestoreOrdersStore {
       },
       { merge: true },
     );
+  }
+
+  async saveSyncedOrder(orderId, orderPayload) {
+    const payload = {
+      ...orderPayload,
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+
+    await this.firestore.collection('orders').doc(orderId).set(payload, {
+      merge: true,
+    });
   }
 
   async saveDelivery(orderId, delivery) {

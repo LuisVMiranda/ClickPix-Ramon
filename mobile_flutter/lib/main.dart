@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:clickpix_ramon/core/delivery/delivery_share_service.dart';
 import 'package:clickpix_ramon/core/i18n/app_localizations.dart';
 import 'package:clickpix_ramon/core/i18n/ui_text.dart';
 import 'package:clickpix_ramon/core/settings/app_settings_store.dart';
@@ -1482,6 +1483,36 @@ class _PhotoDispatchModulePageState extends State<PhotoDispatchModulePage> {
     });
   }
 
+  String _historyChannelLabel(String channel) {
+    switch (channel.trim().toLowerCase()) {
+      case 'whatsapp':
+        return 'WhatsApp';
+      case 'email':
+        return tr(
+          context,
+          pt: 'E-mail',
+          es: 'Correo',
+          en: 'Email',
+        );
+      case 'prepared':
+        return tr(
+          context,
+          pt: 'Pronto para envio',
+          es: 'Listo para env\u00edo',
+          en: 'Ready to send',
+        );
+      default:
+        return channel.trim().isEmpty
+            ? tr(
+                context,
+                pt: 'Registro',
+                es: 'Registro',
+                en: 'Record',
+              )
+            : channel;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final topHistory = _history.take(5).toList(growable: false);
@@ -1594,7 +1625,9 @@ class _PhotoDispatchModulePageState extends State<PhotoDispatchModulePage> {
                           dense: true,
                           contentPadding: EdgeInsets.zero,
                           leading: const Icon(Icons.history),
-                          title: Text('${entry.clientName} - ${entry.channel}'),
+                          title: Text(
+                            '${entry.clientName} - ${_historyChannelLabel(entry.channel)}',
+                          ),
                           subtitle: Text(
                             '${entry.photoCount} foto(s) - ${entry.createdAt}',
                           ),
@@ -1687,6 +1720,7 @@ class _PhotoDispatchModulePageState extends State<PhotoDispatchModulePage> {
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => DeliveryHistoryPage(
+          database: widget.database,
           settingsStore: widget.settingsStore,
         ),
       ),
@@ -1772,10 +1806,12 @@ class _PhotoDispatchModulePageState extends State<PhotoDispatchModulePage> {
 
 class DeliveryHistoryPage extends StatefulWidget {
   const DeliveryHistoryPage({
+    required this.database,
     required this.settingsStore,
     super.key,
   });
 
+  final AppDatabase database;
   final AppSettingsStore settingsStore;
 
   @override
@@ -1792,12 +1828,14 @@ class _DeliveryHistoryPageState extends State<DeliveryHistoryPage> {
   ];
 
   _HistoryPeriodOption _selectedPeriod = _periods.first;
+  late final DeliveryShareService _deliveryShareService;
   List<DeliveryHistoryEntry> _history = const [];
   bool _loading = true;
 
   @override
   void initState() {
     super.initState();
+    _deliveryShareService = DeliveryShareService(widget.database);
     _loadHistory();
   }
 
@@ -1811,6 +1849,363 @@ class _DeliveryHistoryPageState extends State<DeliveryHistoryPage> {
       _history = history;
       _loading = false;
     });
+  }
+
+  Future<void> _showEntryActions(DeliveryHistoryEntry entry) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        final whatsappUnavailable =
+            entry.clientWhatsapp.trim().isEmpty || entry.orderId.trim().isEmpty;
+        final emailUnavailable =
+            entry.clientEmail.trim().isEmpty || entry.orderId.trim().isEmpty;
+        final messageUnavailable = entry.clientMessage.trim().isEmpty;
+        final chatUnavailable = entry.clientWhatsapp.trim().isEmpty;
+
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  entry.clientName,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${tr(context, pt: 'Venda', es: 'Venta', en: 'Sale')}: '
+                  '${entry.orderId.trim().isEmpty ? entry.id : entry.orderId}',
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  tr(
+                    context,
+                    pt: 'O reenvio usa as fotos originais ainda disponiveis neste dispositivo.',
+                    es: 'El reenvio usa las fotos originales todavia disponibles en este dispositivo.',
+                    en: 'Resend uses the original photos still available on this device.',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: whatsappUnavailable
+                        ? null
+                        : () {
+                            Navigator.of(sheetContext).pop();
+                            _shareEntryViaWhatsApp(entry);
+                          },
+                    icon: const Icon(Icons.chat),
+                    label: Text(
+                      tr(
+                        context,
+                        pt: 'Reenviar WhatsApp',
+                        es: 'Reenviar WhatsApp',
+                        en: 'Resend WhatsApp',
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: emailUnavailable
+                        ? null
+                        : () {
+                            Navigator.of(sheetContext).pop();
+                            _shareEntryViaEmail(entry);
+                          },
+                    icon: const Icon(Icons.email),
+                    label: Text(
+                      tr(
+                        context,
+                        pt: 'Reenviar e-mail',
+                        es: 'Reenviar correo',
+                        en: 'Resend email',
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: messageUnavailable
+                        ? null
+                        : () {
+                            Navigator.of(sheetContext).pop();
+                            _copyEntryMessage(entry);
+                          },
+                    icon: const Icon(Icons.copy),
+                    label: Text(
+                      tr(
+                        context,
+                        pt: 'Copiar mensagem',
+                        es: 'Copiar mensaje',
+                        en: 'Copy message',
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: chatUnavailable
+                        ? null
+                        : () {
+                            Navigator.of(sheetContext).pop();
+                            _openEntryChat(entry);
+                          },
+                    icon: const Icon(Icons.open_in_new),
+                    label: Text(
+                      tr(
+                        context,
+                        pt: 'Abrir chat',
+                        es: 'Abrir chat',
+                        en: 'Open chat',
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton.icon(
+                    onPressed: () => Navigator.of(sheetContext).pop(),
+                    icon: const Icon(Icons.close),
+                    label: Text(
+                      tr(
+                        context,
+                        pt: 'Fechar',
+                        es: 'Cerrar',
+                        en: 'Close',
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _shareEntryViaWhatsApp(DeliveryHistoryEntry entry) async {
+    if (entry.orderId.trim().isEmpty) {
+      _showSnackBar(
+        tr(
+          context,
+          pt: 'Esta venda nao possui um pedido valido para reenvio.',
+          es: 'Esta venta no tiene un pedido valido para reenvio.',
+          en: 'This sale does not have a valid order to resend.',
+        ),
+      );
+      return;
+    }
+
+    try {
+      final resolved = await _deliveryShareService.shareOrderViaWhatsApp(
+        orderId: entry.orderId,
+        message: entry.clientMessage,
+      );
+      await _refreshHistoryEntry(entry, channel: 'whatsapp');
+      if (!mounted) {
+        return;
+      }
+      _showShareFeedback(
+        tr(
+          context,
+          pt: 'WhatsApp aberto com fotos anexadas.',
+          es: 'WhatsApp abierto con fotos adjuntas.',
+          en: 'WhatsApp opened with attached photos.',
+        ),
+        resolved,
+      );
+    } on DeliveryShareException {
+      if (!mounted) {
+        return;
+      }
+      _showSnackBar(
+        tr(
+          context,
+          pt: 'As fotos desta venda nao estao mais disponiveis para reenvio.',
+          es: 'Las fotos de esta venta ya no estan disponibles para reenvio.',
+          en: 'This sale photos are no longer available for resend.',
+        ),
+      );
+    } on Object {
+      if (!mounted) {
+        return;
+      }
+      _showSnackBar(
+        tr(
+          context,
+          pt: 'Nao foi possivel abrir o WhatsApp com anexos agora.',
+          es: 'No se pudo abrir WhatsApp con adjuntos ahora.',
+          en: 'Could not open WhatsApp with attachments now.',
+        ),
+      );
+    }
+  }
+
+  Future<void> _shareEntryViaEmail(DeliveryHistoryEntry entry) async {
+    if (entry.orderId.trim().isEmpty) {
+      _showSnackBar(
+        tr(
+          context,
+          pt: 'Esta venda nao possui um pedido valido para reenvio.',
+          es: 'Esta venta no tiene un pedido valido para reenvio.',
+          en: 'This sale does not have a valid order to resend.',
+        ),
+      );
+      return;
+    }
+
+    try {
+      final resolved = await _deliveryShareService.shareOrderViaEmail(
+        orderId: entry.orderId,
+        email: entry.clientEmail,
+        message: entry.clientMessage,
+      );
+      await _refreshHistoryEntry(entry, channel: 'email');
+      if (!mounted) {
+        return;
+      }
+      _showShareFeedback(
+        tr(
+          context,
+          pt: 'Compositor de e-mail aberto com fotos anexadas.',
+          es: 'Compositor de correo abierto con fotos adjuntas.',
+          en: 'Email composer opened with attached photos.',
+        ),
+        resolved,
+      );
+    } on DeliveryShareException {
+      if (!mounted) {
+        return;
+      }
+      _showSnackBar(
+        tr(
+          context,
+          pt: 'As fotos desta venda nao estao mais disponiveis para reenvio.',
+          es: 'Las fotos de esta venta ya no estan disponibles para reenvio.',
+          en: 'This sale photos are no longer available for resend.',
+        ),
+      );
+    } on Object {
+      if (!mounted) {
+        return;
+      }
+      _showSnackBar(
+        tr(
+          context,
+          pt: 'Nao foi possivel abrir o e-mail com anexos agora.',
+          es: 'No se pudo abrir el correo con adjuntos ahora.',
+          en: 'Could not open email with attachments now.',
+        ),
+      );
+    }
+  }
+
+  Future<void> _refreshHistoryEntry(
+    DeliveryHistoryEntry entry, {
+    required String channel,
+  }) async {
+    await widget.settingsStore.appendDeliveryHistory(
+      DeliveryHistoryEntry(
+        id: entry.id,
+        orderId: entry.orderId,
+        clientName: entry.clientName,
+        clientWhatsapp: entry.clientWhatsapp,
+        clientEmail: entry.clientEmail,
+        channel: channel,
+        paymentRequired: entry.paymentRequired,
+        paymentMethodLabel: entry.paymentMethodLabel,
+        photoCount: entry.photoCount,
+        totalAmountCents: entry.totalAmountCents,
+        createdAt: DateTime.now(),
+        comboName: entry.comboName,
+        unitPriceCents: entry.unitPriceCents,
+        databaseCode: entry.databaseCode,
+        databaseCodeExpiresAt: entry.databaseCodeExpiresAt,
+        saleDate: entry.saleDate,
+        photoFileNames: entry.photoFileNames,
+        clientMessage: entry.clientMessage,
+      ),
+    );
+    if (!mounted) {
+      return;
+    }
+    await _loadHistory();
+  }
+
+  Future<void> _copyEntryMessage(DeliveryHistoryEntry entry) async {
+    await Clipboard.setData(ClipboardData(text: entry.clientMessage));
+    if (!mounted) {
+      return;
+    }
+    _showSnackBar(
+      tr(
+        context,
+        pt: 'Mensagem copiada para a area de transferencia.',
+        es: 'Mensaje copiado al portapapeles.',
+        en: 'Message copied to the clipboard.',
+      ),
+    );
+  }
+
+  Future<void> _openEntryChat(DeliveryHistoryEntry entry) async {
+    final normalizedPhone = entry.clientWhatsapp.replaceAll(RegExp(r'\D'), '');
+    if (normalizedPhone.isEmpty) {
+      _showSnackBar(
+        tr(
+          context,
+          pt: 'WhatsApp do cliente nao informado.',
+          es: 'WhatsApp del cliente no informado.',
+          en: 'Client WhatsApp was not provided.',
+        ),
+      );
+      return;
+    }
+
+    final uri = Uri.parse('https://wa.me/$normalizedPhone');
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!mounted) {
+      return;
+    }
+    if (!opened) {
+      _showSnackBar(
+        tr(
+          context,
+          pt: 'Nao foi possivel abrir o chat do cliente agora.',
+          es: 'No se pudo abrir el chat del cliente ahora.',
+          en: 'Could not open the client chat now.',
+        ),
+      );
+    }
+  }
+
+  void _showShareFeedback(
+    String baseMessage,
+    ResolvedDeliveryShareFiles resolved,
+  ) {
+    final message = resolved.missingCount <= 0
+        ? baseMessage
+        : '$baseMessage '
+            '${tr(context, pt: '${resolved.missingCount} foto(s) nao estavam mais disponiveis.', es: '${resolved.missingCount} foto(s) ya no estaban disponibles.', en: '${resolved.missingCount} photo(s) were no longer available.')}';
+    _showSnackBar(message);
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   @override
@@ -1911,13 +2306,23 @@ class _DeliveryHistoryPageState extends State<DeliveryHistoryPage> {
                               (entry) => ListTile(
                                 dense: true,
                                 contentPadding: EdgeInsets.zero,
+                                onTap: () => _showEntryActions(entry),
                                 leading: const Icon(Icons.receipt_long),
-                                title: Text(entry.clientName),
-                                subtitle: Text(
-                                  '${entry.photoCount} foto(s) - ${entry.paymentMethodLabel} - ${_historyTime(entry.createdAt)}',
+                                title: Text(
+                                  '${entry.clientName} - ${_historyChannelLabel(entry.channel)}',
                                 ),
-                                trailing: Text(
-                                  _historyMoney(entry.totalAmountCents),
+                                subtitle: Text(
+                                  '${entry.photoCount} foto(s) - ${entry.paymentMethodLabel} - ${_historyMoney(entry.totalAmountCents)} - ${_historyTime(entry.createdAt)}',
+                                ),
+                                trailing: IconButton(
+                                  tooltip: tr(
+                                    context,
+                                    pt: 'Reenviar',
+                                    es: 'Reenviar',
+                                    en: 'Resend',
+                                  ),
+                                  onPressed: () => _showEntryActions(entry),
+                                  icon: const Icon(Icons.send),
                                 ),
                               ),
                             ),
@@ -1969,6 +2374,36 @@ class _DeliveryHistoryPageState extends State<DeliveryHistoryPage> {
           ),
         )
         .toList(growable: false);
+  }
+
+  String _historyChannelLabel(String channel) {
+    switch (channel.trim().toLowerCase()) {
+      case 'whatsapp':
+        return 'WhatsApp';
+      case 'email':
+        return tr(
+          context,
+          pt: 'E-mail',
+          es: 'Correo',
+          en: 'Email',
+        );
+      case 'prepared':
+        return tr(
+          context,
+          pt: 'Pronto para envio',
+          es: 'Listo para envio',
+          en: 'Ready to send',
+        );
+      default:
+        return channel.trim().isEmpty
+            ? tr(
+                context,
+                pt: 'Registro',
+                es: 'Registro',
+                en: 'Record',
+              )
+            : channel;
+    }
   }
 
   String _historyPeriodLabel(
@@ -2057,6 +2492,7 @@ class _SalesAndDispatchesPageState extends State<SalesAndDispatchesPage> {
   ];
 
   _SalesWeeksFilter _selectedFilter = _filters.first;
+  late final DeliveryShareService _deliveryShareService;
   List<_SaleDispatchRecord> _records = const [];
   int _visibleCount = _pageSize;
   bool _loading = true;
@@ -2064,6 +2500,7 @@ class _SalesAndDispatchesPageState extends State<SalesAndDispatchesPage> {
   @override
   void initState() {
     super.initState();
+    _deliveryShareService = DeliveryShareService(widget.database);
     _reload();
   }
 
@@ -2135,9 +2572,12 @@ class _SalesAndDispatchesPageState extends State<SalesAndDispatchesPage> {
         : _fallbackFileNames(orderItems: orderItems, assetsById: assetsById);
 
     return _SaleDispatchRecord(
+      orderId: entry.orderId,
       clientName: entry.clientName.trim(),
       clientWhatsapp: entry.clientWhatsapp.trim(),
       clientEmail: entry.clientEmail.trim(),
+      channel: entry.channel.trim(),
+      clientMessage: entry.clientMessage.trim(),
       saleNumber: entry.orderId.trim().isEmpty ? entry.id : entry.orderId,
       paymentMethod: paymentMethod,
       photoCount: entry.photoCount,
@@ -2233,6 +2673,190 @@ class _SalesAndDispatchesPageState extends State<SalesAndDispatchesPage> {
       }
     }
     return names.take(120).toList(growable: false);
+  }
+
+  String _deliveryChannelLabel(BuildContext context, String channel) {
+    switch (channel.trim().toLowerCase()) {
+      case 'whatsapp':
+        return 'WhatsApp';
+      case 'email':
+        return tr(
+          context,
+          pt: 'E-mail',
+          es: 'Correo',
+          en: 'Email',
+        );
+      case 'prepared':
+        return tr(
+          context,
+          pt: 'Pronto para envio',
+          es: 'Listo para env\u00edo',
+          en: 'Ready to send',
+        );
+      default:
+        return channel.trim().isEmpty
+            ? tr(
+                context,
+                pt: 'Registro',
+                es: 'Registro',
+                en: 'Record',
+              )
+            : channel;
+    }
+  }
+
+  Future<void> _shareRecordViaWhatsApp(_SaleDispatchRecord record) async {
+    try {
+      final resolved = await _deliveryShareService.shareOrderViaWhatsApp(
+        orderId: record.orderId,
+        message: record.clientMessage,
+      );
+      if (!mounted) {
+        return;
+      }
+      _showShareFeedback(
+        tr(
+          context,
+          pt: 'WhatsApp aberto com fotos anexadas.',
+          es: 'WhatsApp abierto con fotos adjuntas.',
+          en: 'WhatsApp opened with attached photos.',
+        ),
+        resolved,
+      );
+    } on DeliveryShareException {
+      if (!mounted) {
+        return;
+      }
+      _showSnackBar(
+        tr(
+          context,
+          pt: 'As fotos desta venda n\u00e3o est\u00e3o mais dispon\u00edveis para reenvio.',
+          es: 'Las fotos de esta venta ya no est\u00e1n disponibles para reenv\u00edo.',
+          en: 'This sale photos are no longer available for resend.',
+        ),
+      );
+    } on Object {
+      if (!mounted) {
+        return;
+      }
+      _showSnackBar(
+        tr(
+          context,
+          pt: 'N\u00e3o foi poss\u00edvel abrir o WhatsApp com anexos agora.',
+          es: 'No se pudo abrir WhatsApp con adjuntos ahora.',
+          en: 'Could not open WhatsApp with attachments now.',
+        ),
+      );
+    }
+  }
+
+  Future<void> _shareRecordViaEmail(_SaleDispatchRecord record) async {
+    try {
+      final resolved = await _deliveryShareService.shareOrderViaEmail(
+        orderId: record.orderId,
+        email: record.clientEmail,
+        message: record.clientMessage,
+      );
+      if (!mounted) {
+        return;
+      }
+      _showShareFeedback(
+        tr(
+          context,
+          pt: 'Compositor de e-mail aberto com fotos anexadas.',
+          es: 'Compositor de correo abierto con fotos adjuntas.',
+          en: 'Email composer opened with attached photos.',
+        ),
+        resolved,
+      );
+    } on DeliveryShareException {
+      if (!mounted) {
+        return;
+      }
+      _showSnackBar(
+        tr(
+          context,
+          pt: 'As fotos desta venda n\u00e3o est\u00e3o mais dispon\u00edveis para reenvio.',
+          es: 'Las fotos de esta venta ya no est\u00e1n disponibles para reenv\u00edo.',
+          en: 'This sale photos are no longer available for resend.',
+        ),
+      );
+    } on Object {
+      if (!mounted) {
+        return;
+      }
+      _showSnackBar(
+        tr(
+          context,
+          pt: 'N\u00e3o foi poss\u00edvel abrir o e-mail com anexos agora.',
+          es: 'No se pudo abrir el correo con adjuntos ahora.',
+          en: 'Could not open email with attachments now.',
+        ),
+      );
+    }
+  }
+
+  Future<void> _copyRecordMessage(_SaleDispatchRecord record) async {
+    await Clipboard.setData(ClipboardData(text: record.clientMessage));
+    if (!mounted) {
+      return;
+    }
+    _showSnackBar(
+      tr(
+        context,
+        pt: 'Mensagem copiada para a \u00e1rea de transfer\u00eancia.',
+        es: 'Mensaje copiado al portapapeles.',
+        en: 'Message copied to the clipboard.',
+      ),
+    );
+  }
+
+  Future<void> _openRecordChat(_SaleDispatchRecord record) async {
+    final normalizedPhone = record.clientWhatsapp.replaceAll(RegExp(r'\D'), '');
+    if (normalizedPhone.isEmpty) {
+      _showSnackBar(
+        tr(
+          context,
+          pt: 'WhatsApp do cliente n\u00e3o informado.',
+          es: 'WhatsApp del cliente no informado.',
+          en: 'Client WhatsApp was not provided.',
+        ),
+      );
+      return;
+    }
+
+    final uri = Uri.parse('https://wa.me/$normalizedPhone');
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!mounted) {
+      return;
+    }
+    if (!opened) {
+      _showSnackBar(
+        tr(
+          context,
+          pt: 'N\u00e3o foi poss\u00edvel abrir o chat do cliente agora.',
+          es: 'No se pudo abrir el chat del cliente ahora.',
+          en: 'Could not open the client chat now.',
+        ),
+      );
+    }
+  }
+
+  void _showShareFeedback(
+    String baseMessage,
+    ResolvedDeliveryShareFiles resolved,
+  ) {
+    final message = resolved.missingCount <= 0
+        ? baseMessage
+        : '$baseMessage '
+            '${tr(context, pt: '${resolved.missingCount} foto(s) n\u00e3o estavam mais dispon\u00edveis.', es: '${resolved.missingCount} foto(s) ya no estaban disponibles.', en: '${resolved.missingCount} photo(s) were no longer available.')}';
+    _showSnackBar(message);
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   @override
@@ -2372,6 +2996,14 @@ class _SalesAndDispatchesPageState extends State<SalesAndDispatchesPage> {
                             en: 'No file names were recorded.',
                           )
                         : record.fileNames.join(', ');
+                    final messageText = record.clientMessage.isEmpty
+                        ? tr(
+                            context,
+                            pt: 'Mensagem original n\u00e3o registrada.',
+                            es: 'Mensaje original no registrado.',
+                            en: 'Original message was not recorded.',
+                          )
+                        : record.clientMessage;
                     final photosLabel = tr(
                       context,
                       pt: 'fotos',
@@ -2402,7 +3034,7 @@ class _SalesAndDispatchesPageState extends State<SalesAndDispatchesPage> {
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                         subtitle: Text(
-                          '${record.paymentMethod} \u00b7 ${record.photoCount} $photosLabel \u00b7 ${_money(record.totalAmountCents)}',
+                          '${_deliveryChannelLabel(context, record.channel)} \u00b7 ${record.paymentMethod} \u00b7 ${record.photoCount} $photosLabel \u00b7 ${_money(record.totalAmountCents)}',
                         ),
                         children: [
                           Align(
@@ -2486,6 +3118,89 @@ class _SalesAndDispatchesPageState extends State<SalesAndDispatchesPage> {
                             alignment: Alignment.centerLeft,
                             child: Text(filesText),
                           ),
+                          const SizedBox(height: 10),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              tr(
+                                context,
+                                pt: 'Mensagem ao cliente:',
+                                es: 'Mensaje al cliente:',
+                                en: 'Client message:',
+                              ),
+                              style: Theme.of(context).textTheme.titleSmall,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: SelectableText(messageText),
+                          ),
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              FilledButton.icon(
+                                onPressed: record.clientWhatsapp.isEmpty ||
+                                        record.orderId.isEmpty
+                                    ? null
+                                    : () => _shareRecordViaWhatsApp(record),
+                                icon: const Icon(Icons.chat),
+                                label: Text(
+                                  tr(
+                                    context,
+                                    pt: 'Reenviar WhatsApp',
+                                    es: 'Reenviar WhatsApp',
+                                    en: 'Resend WhatsApp',
+                                  ),
+                                ),
+                              ),
+                              OutlinedButton.icon(
+                                onPressed: record.clientEmail.isEmpty ||
+                                        record.orderId.isEmpty
+                                    ? null
+                                    : () => _shareRecordViaEmail(record),
+                                icon: const Icon(Icons.email),
+                                label: Text(
+                                  tr(
+                                    context,
+                                    pt: 'Reenviar e-mail',
+                                    es: 'Reenviar correo',
+                                    en: 'Resend email',
+                                  ),
+                                ),
+                              ),
+                              OutlinedButton.icon(
+                                onPressed: record.clientMessage.isEmpty
+                                    ? null
+                                    : () => _copyRecordMessage(record),
+                                icon: const Icon(Icons.copy),
+                                label: Text(
+                                  tr(
+                                    context,
+                                    pt: 'Copiar mensagem',
+                                    es: 'Copiar mensaje',
+                                    en: 'Copy message',
+                                  ),
+                                ),
+                              ),
+                              OutlinedButton.icon(
+                                onPressed: record.clientWhatsapp.isEmpty
+                                    ? null
+                                    : () => _openRecordChat(record),
+                                icon: const Icon(Icons.open_in_new),
+                                label: Text(
+                                  tr(
+                                    context,
+                                    pt: 'Abrir chat',
+                                    es: 'Abrir chat',
+                                    en: 'Open chat',
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ],
                       ),
                     );
@@ -2539,9 +3254,12 @@ class _SalesWeeksFilter {
 
 class _SaleDispatchRecord {
   const _SaleDispatchRecord({
+    required this.orderId,
     required this.clientName,
     required this.clientWhatsapp,
     required this.clientEmail,
+    required this.channel,
+    required this.clientMessage,
     required this.saleNumber,
     required this.paymentMethod,
     required this.photoCount,
@@ -2554,9 +3272,12 @@ class _SaleDispatchRecord {
     required this.fileNames,
   });
 
+  final String orderId;
   final String clientName;
   final String clientWhatsapp;
   final String clientEmail;
+  final String channel;
+  final String clientMessage;
   final String saleNumber;
   final String paymentMethod;
   final int photoCount;
@@ -2604,6 +3325,7 @@ class _AppConfigurationPageState extends State<AppConfigurationPage> {
   static const String _sectionPixIntegration = 'pix_integration';
   static const String _sectionWebAccess = 'web_access';
   static const String _sectionAdminSecurity = 'admin_security';
+  static const String _sectionTemporaryFiles = 'temporary_files';
 
   final _photographerNameController = TextEditingController();
   final _photographerWhatsappController = TextEditingController();
@@ -2622,6 +3344,7 @@ class _AppConfigurationPageState extends State<AppConfigurationPage> {
   final _webDbPasswordController = TextEditingController();
   final _messageTemplateController = TextEditingController();
   final _imagePicker = ImagePicker();
+  late final DeliveryShareService _deliveryShareService;
   bool _wifiOnly = false;
   int _accessCodeDays = 7;
   List<PictureComboPricing> _pictureCombos = const [];
@@ -2634,7 +3357,11 @@ class _AppConfigurationPageState extends State<AppConfigurationPage> {
   bool _savingBackground = false;
   bool _savingBusinessProfile = false;
   bool _savingAdminCredentials = false;
+  bool _temporaryFilesLoading = true;
+  bool _temporaryFilesClearing = false;
   String _adminUsername = AppSettingsStore.defaultAdminUsername;
+  DeliveryTemporaryFilesSummary _temporaryFilesSummary =
+      const DeliveryTemporaryFilesSummary(fileCount: 0, totalBytes: 0);
   final Map<String, bool> _expandedSections = <String, bool>{
     _sectionPhotographerProfile: true,
     _sectionPhotoCombos: false,
@@ -2644,6 +3371,7 @@ class _AppConfigurationPageState extends State<AppConfigurationPage> {
     _sectionPixIntegration: false,
     _sectionWebAccess: false,
     _sectionAdminSecurity: false,
+    _sectionTemporaryFiles: false,
   };
   String get _currentAccentFamily =>
       _accentFamilyFromKey(_visualSettings.accentColorKey);
@@ -2651,6 +3379,7 @@ class _AppConfigurationPageState extends State<AppConfigurationPage> {
   @override
   void initState() {
     super.initState();
+    _deliveryShareService = DeliveryShareService(widget.settingsStore.database);
     _visualSettings = widget.visualSettings;
     _backgroundSettings = widget.backgroundSettings;
     _loadSettings();
@@ -2678,6 +3407,7 @@ class _AppConfigurationPageState extends State<AppConfigurationPage> {
   }
 
   Future<void> _loadSettings() async {
+    await _deliveryShareService.cleanupExpiredTemporaryFiles();
     final businessProfile = await widget.settingsStore.loadBusinessProfile();
     final credentials = await widget.settingsStore.loadAdminCredentials();
     final delivery = await widget.settingsStore.loadDeliverySettings();
@@ -2688,6 +3418,8 @@ class _AppConfigurationPageState extends State<AppConfigurationPage> {
         await widget.settingsStore.loadDeliveryWebAccessSettings();
     final messageTemplateSettings =
         await widget.settingsStore.loadClientMessageTemplates();
+    final temporaryFilesSummary =
+        await _deliveryShareService.inspectTemporaryFiles();
     if (!mounted) {
       return;
     }
@@ -2713,6 +3445,8 @@ class _AppConfigurationPageState extends State<AppConfigurationPage> {
       _messageTemplateSettings = messageTemplateSettings;
       _messageTemplateController.text = messageTemplateSettings
           .templateForLanguage(_selectedTemplateLanguage);
+      _temporaryFilesSummary = temporaryFilesSummary;
+      _temporaryFilesLoading = false;
     });
   }
 
@@ -2908,6 +3642,204 @@ class _AppConfigurationPageState extends State<AppConfigurationPage> {
     setState(() => _savingBackground = false);
   }
 
+  Future<void> _refreshTemporaryFilesSummary() async {
+    setState(() => _temporaryFilesLoading = true);
+    final summary = await _deliveryShareService.inspectTemporaryFiles();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _temporaryFilesSummary = summary;
+      _temporaryFilesLoading = false;
+    });
+  }
+
+  Future<void> _confirmClearTemporaryFiles() async {
+    if (_temporaryFilesClearing) {
+      return;
+    }
+    if (_temporaryFilesLoading) {
+      await _refreshTemporaryFilesSummary();
+    }
+    if (!mounted) {
+      return;
+    }
+    if (_temporaryFilesSummary.fileCount == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            tr(
+              context,
+              pt: 'Nenhum arquivo temporário do app foi encontrado.',
+              es: 'No se encontraron archivos temporales de la app.',
+              en: 'No temporary app files were found.',
+            ),
+          ),
+        ),
+      );
+      return;
+    }
+
+    final shouldClear = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (dialogContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  tr(
+                    dialogContext,
+                    pt: 'Revisar limpeza de temporários',
+                    es: 'Revisar limpieza de temporales',
+                    en: 'Review temporary cleanup',
+                  ),
+                  style: Theme.of(dialogContext).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  tr(
+                    dialogContext,
+                    pt: 'Esta limpeza remove apenas cópias temporárias criadas para compartilhamento e planilhas temporárias exportadas pelo app.',
+                    es: 'Esta limpieza elimina solo copias temporales creadas para compartir y planillas temporales exportadas por la app.',
+                    en: 'This cleanup removes only temporary copies created for sharing and temporary spreadsheets exported by the app.',
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  tr(
+                    dialogContext,
+                    pt: 'Não remove fotos originais, histórico de vendas/envios, banco de dados, mensagens salvas ou configurações.',
+                    es: 'No elimina fotos originales, historial de ventas/envíos, base de datos, mensajes guardados ni configuraciones.',
+                    en: 'It does not remove original photos, sales/dispatch history, database, saved messages, or settings.',
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: Theme.of(dialogContext).colorScheme.errorContainer,
+                  ),
+                  child: Text(
+                    tr(
+                      dialogContext,
+                      pt: 'Se você acabou de abrir WhatsApp ou e-mail para finalizar um envio, cancele por enquanto e limpe depois. Apagar temporários durante um envio em andamento pode interromper anexos ainda abertos em outro app.',
+                      es: 'Si acabas de abrir WhatsApp o correo para terminar un envío, cancela por ahora y limpia después. Borrar temporales durante un envío en curso puede interrumpir adjuntos todavía abiertos en otra app.',
+                      en: 'If you just opened WhatsApp or email to finish a dispatch, cancel for now and clean later. Deleting temporary files during an in-progress share can interrupt attachments still open in another app.',
+                    ),
+                    style: TextStyle(
+                      color:
+                          Theme.of(dialogContext).colorScheme.onErrorContainer,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  tr(
+                    dialogContext,
+                    pt: 'Arquivos detectados: ${_temporaryFilesSummary.fileCount}',
+                    es: 'Archivos detectados: ${_temporaryFilesSummary.fileCount}',
+                    en: 'Detected files: ${_temporaryFilesSummary.fileCount}',
+                  ),
+                ),
+                Text(
+                  tr(
+                    dialogContext,
+                    pt: 'Espaço estimado: ${_formatBytes(_temporaryFilesSummary.totalBytes)}',
+                    es: 'Espacio estimado: ${_formatBytes(_temporaryFilesSummary.totalBytes)}',
+                    en: 'Estimated space: ${_formatBytes(_temporaryFilesSummary.totalBytes)}',
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(dialogContext).pop(false),
+                        child: Text(
+                          tr(
+                            dialogContext,
+                            pt: 'Cancelar',
+                            es: 'Cancelar',
+                            en: 'Cancel',
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: () => Navigator.of(dialogContext).pop(true),
+                        child: Text(
+                          tr(
+                            dialogContext,
+                            pt: 'Limpar agora',
+                            es: 'Limpiar ahora',
+                            en: 'Clean now',
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (shouldClear != true || !mounted) {
+      return;
+    }
+
+    setState(() => _temporaryFilesClearing = true);
+    try {
+      final result = await _deliveryShareService.clearTemporaryFiles();
+      await _refreshTemporaryFilesSummary();
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            tr(
+              context,
+              pt: 'Temporários removidos: ${result.deletedFileCount} arquivo(s), ${_formatBytes(result.deletedTotalBytes)} liberados.',
+              es: 'Temporales eliminados: ${result.deletedFileCount} archivo(s), ${_formatBytes(result.deletedTotalBytes)} liberados.',
+              en: 'Temporary files removed: ${result.deletedFileCount} file(s), ${_formatBytes(result.deletedTotalBytes)} freed.',
+            ),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _temporaryFilesClearing = false);
+      }
+    }
+  }
+
+  String _formatBytes(int bytes) {
+    if (bytes <= 0) {
+      return '0 B';
+    }
+    const units = ['B', 'KB', 'MB', 'GB'];
+    var value = bytes.toDouble();
+    var unitIndex = 0;
+    while (value >= 1024 && unitIndex < units.length - 1) {
+      value /= 1024;
+      unitIndex += 1;
+    }
+    final decimals = unitIndex == 0 ? 0 : 1;
+    return '${value.toStringAsFixed(decimals)} ${units[unitIndex]}';
+  }
+
   bool _isSectionExpanded(String sectionId) {
     return _expandedSections[sectionId] ?? false;
   }
@@ -3071,6 +4003,18 @@ class _AppConfigurationPageState extends State<AppConfigurationPage> {
                 en: 'Administrator security',
               ),
               child: _buildAdminSecurityCard(context, showTitle: false),
+            ),
+            const SizedBox(height: 16),
+            _buildToggleableSettingsSection(
+              context: context,
+              sectionId: _sectionTemporaryFiles,
+              title: tr(
+                context,
+                pt: 'Arquivos temporários',
+                es: 'Archivos temporales',
+                en: 'Temporary files',
+              ),
+              child: _buildTemporaryFilesCard(context, showTitle: false),
             ),
           ],
         ),
@@ -3996,6 +4940,129 @@ class _AppConfigurationPageState extends State<AppConfigurationPage> {
                 ),
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTemporaryFilesCard(
+    BuildContext context, {
+    bool showTitle = true,
+  }) {
+    final summary = _temporaryFilesSummary;
+    final hasFiles = summary.fileCount > 0;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (showTitle) ...[
+              Text(
+                tr(
+                  context,
+                  pt: 'Arquivos temporários',
+                  es: 'Archivos temporales',
+                  en: 'Temporary files',
+                ),
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+            ],
+            Text(
+              tr(
+                context,
+                pt: 'Use esta área para revisar e limpar apenas cópias temporárias criadas para compartilhamento e planilhas temporárias de exportação.',
+                es: 'Usa esta área para revisar y limpiar solo copias temporales creadas para compartir y planillas temporales de exportación.',
+                en: 'Use this area to review and clear only temporary copies created for sharing and temporary exported spreadsheets.',
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              tr(
+                context,
+                pt: 'Fotos originais, histórico, banco de dados e configurações permanecem intactos.',
+                es: 'Las fotos originales, el historial, la base de datos y la configuración permanecen intactos.',
+                en: 'Original photos, history, database, and settings stay intact.',
+              ),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            if (_temporaryFilesLoading)
+              const LinearProgressIndicator()
+            else ...[
+              Text(
+                tr(
+                  context,
+                  pt: 'Arquivos temporários detectados: ${summary.fileCount}',
+                  es: 'Archivos temporales detectados: ${summary.fileCount}',
+                  en: 'Detected temporary files: ${summary.fileCount}',
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                tr(
+                  context,
+                  pt: 'Espaço estimado: ${_formatBytes(summary.totalBytes)}',
+                  es: 'Espacio estimado: ${_formatBytes(summary.totalBytes)}',
+                  en: 'Estimated space: ${_formatBytes(summary.totalBytes)}',
+                ),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: _temporaryFilesClearing
+                        ? null
+                        : _refreshTemporaryFilesSummary,
+                    icon: const Icon(Icons.refresh),
+                    label: Text(
+                      tr(
+                        context,
+                        pt: 'Atualizar revisão',
+                        es: 'Actualizar revisión',
+                        en: 'Refresh review',
+                      ),
+                    ),
+                  ),
+                  FilledButton.icon(
+                    onPressed: !hasFiles || _temporaryFilesClearing
+                        ? null
+                        : _confirmClearTemporaryFiles,
+                    icon: _temporaryFilesClearing
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.delete_sweep_outlined),
+                    label: Text(
+                      tr(
+                        context,
+                        pt: 'Revisar e limpar',
+                        es: 'Revisar y limpiar',
+                        en: 'Review and clear',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (hasFiles) ...[
+                const SizedBox(height: 10),
+                Text(
+                  tr(
+                    context,
+                    pt: 'Dica: se você abriu WhatsApp ou e-mail e ainda não terminou o envio, finalize primeiro e limpe depois.',
+                    es: 'Consejo: si abriste WhatsApp o correo y todavía no terminaste el envío, finalízalo primero y limpia después.',
+                    en: 'Tip: if you opened WhatsApp or email and have not finished sending yet, finish first and clean afterward.',
+                  ),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ],
           ],
         ),
       ),
