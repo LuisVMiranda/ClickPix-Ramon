@@ -4,7 +4,7 @@
     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <uses-permission android:name="android.permission.WRITE_CONTACTS" />
     <application
-        android:label="clickpix_ramon"
+        android:label="ClickPix"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <provider

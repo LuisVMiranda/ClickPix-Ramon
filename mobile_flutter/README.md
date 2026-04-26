@@ -1,4 +1,4 @@
-# clickpix_ramon
+# ClickPix
 
 A new Flutter project.
 

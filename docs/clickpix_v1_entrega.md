@@ -1,4 +1,4 @@
-# ClickPix Ramon V1 — Plano de Implementação Incremental (Executável)
+# ClickPix V1 — Plano de Implementação Incremental (Executável)
 
 > **Objetivo deste documento:** transformar o escopo do V1 em passos pequenos, verificáveis e com baixo risco de alucinação durante implementação.
 > 

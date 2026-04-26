@@ -1,6 +1,6 @@
-# flutter_application_2
+# ClickPix
 
-A new Flutter project.
+ClickPix sample workspace.
 
 ## Getting Started
 

@@ -103,7 +103,7 @@ abstract class AppLocalizations {
   /// No description provided for @appTitle.
   ///
   /// In pt, this message translates to:
-  /// **'ClickPix Ramon'**
+  /// **'ClickPix'**
   String get appTitle;
 
   /// No description provided for @quickService.

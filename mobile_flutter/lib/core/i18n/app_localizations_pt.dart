@@ -9,7 +9,7 @@ class AppLocalizationsPt extends AppLocalizations {
   AppLocalizationsPt([String locale = 'pt']) : super(locale);
 
   @override
-  String get appTitle => 'ClickPix Ramon';
+  String get appTitle => 'ClickPix';
 
   @override
   String get quickService => 'Atendimento Rápido';
